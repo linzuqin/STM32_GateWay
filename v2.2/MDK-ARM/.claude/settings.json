@@ -1,0 +1,16 @@
+{
+  "permissions": {
+    "allow": [
+      "Read(//e/project/myproject/MyBoard_4IN4OUT/v1.1/**)",
+      "Bash(find \"e:/project/myproject/MyBoard_4IN4OUT\" -maxdepth 5 -type f \\\\\\( -name \"*.c\" -o -name \"*.h\" -o -name \"*.s\" -o -name \"*.uvproj*\" \\\\\\) 2>/dev/null | head -80)",
+      "Read(//e/project/myproject/MyBoard_4IN4OUT/**)",
+      "Bash(sed -i 's/^#define PAGE_SIZE.*2048.*/#define PAGE_SIZE              1024 \\\\/\\\\/ Flash页大小（STM32F103C8T6 每页 1KB，原值 2048 导致擦除算错地址）/' \"e:/project/myproject/MyBoard_4IN4OUT/v1.1/BSP/HAL_FLASH/hal_flash.h\")"
+    ],
+    "additionalDirectories": [
+      "e:\\project\\myproject\\MyBoard_4IN4OUT\\v1.1\\BSP\\ioLibrary_Driver\\Ethernet",
+      "e:\\project\\myproject\\MyBoard_4IN4OUT\\v1.1\\Core\\Src",
+      "e:\\project\\myproject\\MyBoard_4IN4OUT\\v1.1\\BSP\\lfs",
+      "e:\\project\\myproject\\MyBoard_4IN4OUT\\v1.1\\BSP\\HAL_FLASH"
+    ]
+  }
+}

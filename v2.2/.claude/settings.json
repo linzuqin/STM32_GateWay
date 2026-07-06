@@ -1,0 +1,17 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(python3 -c ' *)",
+      "Bash(cat)",
+      "Bash(python3 /tmp/fix_msh.py)",
+      "Bash(python3 /tmp/update_msh.py)",
+      "Bash(tr -d '\\\\000')",
+      "Bash(mv /tmp/msh_clean.c \"e:/project/myproject/myCard/wlan/v2.2/BSP/msh/msh.c\")",
+      "Bash(sed -n '166,167p' \"e:/project/myproject/myCar/wlan/v2.2/BSP/ioLibrary_Driver/Application/loopback/loopback.c\")",
+      "Read(//e/project/myproject/myCar/wlan/v2.2/BSP/ioLibrary_Driver/Application/loopback/**)",
+      "Bash(grep -n '\\\\\\\\\"...\\\\\\\\r\\\\\\\\n\"\\\\|\\\\.\\\\.\\\\.\\\\\\\\r\\\\\\\\n\"\\\\|\\\\\\\\r\\\\\\\\n\".*\"\\\\|^.*\"$' \"e:/project/myproject/myCard/wlan/v2.2/BSP/ioLibrary_Driver/Application/loopback/loopback.c\")",
+      "Bash(sed -i '351s/^nstatic/static/' \"e:/project/myproject/myCard/wlan/v2.2/BSP/msh/msh.c\")",
+      "Bash(sed -i '388s/.*/static void msh_sudo_callback\\(char *buf\\)\\\\n{/' \"e:/project/myproject/myCard/wlan/v2.2/BSP/msh/msh.c\")"
+    ]
+  }
+}

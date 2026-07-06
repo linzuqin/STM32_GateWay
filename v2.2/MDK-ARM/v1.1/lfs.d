@@ -1,0 +1,10 @@
+v1.1\lfs.o: ..\BSP\lfs\lfs.c
+v1.1\lfs.o: ..\BSP\lfs\lfs.h
+v1.1\lfs.o: ..\BSP\lfs\lfs_util.h
+v1.1\lfs.o: E:\KEIL\CORE\ARM\ARM_Compiler_5.06u7\Bin\..\include\stdint.h
+v1.1\lfs.o: E:\KEIL\CORE\ARM\ARM_Compiler_5.06u7\Bin\..\include\stdbool.h
+v1.1\lfs.o: E:\KEIL\CORE\ARM\ARM_Compiler_5.06u7\Bin\..\include\string.h
+v1.1\lfs.o: E:\KEIL\CORE\ARM\ARM_Compiler_5.06u7\Bin\..\include\inttypes.h
+v1.1\lfs.o: E:\KEIL\CORE\ARM\ARM_Compiler_5.06u7\Bin\..\include\stdlib.h
+v1.1\lfs.o: E:\KEIL\CORE\ARM\ARM_Compiler_5.06u7\Bin\..\include\assert.h
+v1.1\lfs.o: E:\KEIL\CORE\ARM\ARM_Compiler_5.06u7\Bin\..\include\stdio.h
