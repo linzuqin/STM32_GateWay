@@ -1,13 +1,9 @@
 #ifndef _APP_W5500_H_
 #define _APP_W5500_H_
+#include "app_w5500_tcp_client.h"
+#include "app_w5500_tcp_server.h"
+#include "app_w5500_udp.h"
 
-#include <stdint.h>
-#include "wiz_platform.h"
-#include "socket.h"
-#include "dhcp.h"
-#include "loopback.h"
-#include "w5500.h"
-#include "socket.h"
 
 #define TCP_SOCKET	0
 #define UDP_SOCKET  1
@@ -20,9 +16,23 @@ typedef enum
     NETWORK_UDP,
 }network_con_type;
 
+typedef struct
+{
+    uint8_t digital_out_1;
+    uint8_t digital_out_2;
+    uint8_t digital_in_1;
+    uint8_t digital_in_2;
 
-extern uint8_t socket_0_tcp_dest_ip[4];
-extern uint16_t socket_0_tcp_dest_port;
+    float analog_in_1;
+    float analog_in_2;
+    
+    float analog_out_1;
+
+    float temp;
+    uint8_t beep_stae;
+}network_report_info_t;
+
+extern network_report_info_t network_report_info;
 
 void tcp_1s_callback(void);
 void network_proc(void);

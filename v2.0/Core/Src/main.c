@@ -126,14 +126,14 @@ int main(void)
 	HAL_ADC_Start(&hadc1);
 
 	board_temp_init(); // ADC自校准，提升精度
-
+	
 		/* wizchip init */
 
 	lfs_info_init(1);
 	test_folder_and_file();
 	/* read flash dest ip and port*/
-	lfs_user_read(dir_path , dest_ip_path , socket_0_tcp_dest_ip , sizeof(socket_0_tcp_dest_ip));
-	lfs_user_read(dir_path , dest_port_path , (uint8_t *)&socket_0_tcp_dest_port , sizeof(socket_0_tcp_dest_port));
+	lfs_user_read(dir_path , dest_ip_path , tcp_client_dest_ip , sizeof(tcp_client_dest_ip));
+	lfs_user_read(dir_path , dest_port_path , (uint8_t *)&tcp_client_dest_port , sizeof(tcp_client_dest_port));
 	msh_init();
 	wizchip_initialize();
   /* USER CODE END 2 */
@@ -220,7 +220,7 @@ void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim)
 	if(htim->Instance == TIM3)
 	{
 		DHCP_time_handler();
-		tcp_1s_callback();
+		// tcp_1s_callback();
 	}
 }
 /* USER CODE END 4 */

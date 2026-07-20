@@ -125,9 +125,11 @@
                 "e:\\project\\myproject\\myCard\\wlan\\v2.0\\BSP\\msh",
                 "e:\\project\\myproject\\myCard\\wlan\\v2.0\\BSP\\env",
                 "e:\\project\\myproject\\myCard\\wlan\\v2.0\\BSP\\cJSON",
+                "e:\\project\\myproject\\myCard\\wlan\\v2.0\\BSP\\tinycrypt-latest\\include",
                 "e:\\project\\myproject\\myCard\\wlan\\v2.0\\MDK-ARM",
                 "e:\\project\\myproject\\myCard\\wlan\\v2.0\\Core\\Src",
-                "e:\\project\\myproject\\myCard\\wlan\\v2.0\\Drivers\\STM32F1xx_HAL_Driver\\Src"
+                "e:\\project\\myproject\\myCard\\wlan\\v2.0\\Drivers\\STM32F1xx_HAL_Driver\\Src",
+                "e:\\project\\myproject\\myCard\\wlan\\v2.0\\BSP\\tinycrypt-latest\\src"
             ],
             "defines": [
                 "USE_HAL_DRIVER",

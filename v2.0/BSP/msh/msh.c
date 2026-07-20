@@ -241,7 +241,7 @@ static void msh_set_dest_ip_callback(int argc, char *argv)
 {
 	if (argv[0] == 0)
 	{
-		msh_printf("当前目的ip:%d.%d.%d.%d\r\n" , socket_0_tcp_dest_ip[0] , socket_0_tcp_dest_ip[1] , socket_0_tcp_dest_ip[2] , socket_0_tcp_dest_ip[3]);
+		msh_printf("当前目的ip:%d.%d.%d.%d\r\n" , tcp_client_dest_ip[0] , tcp_client_dest_ip[1] , tcp_client_dest_ip[2] , tcp_client_dest_ip[3]);
 		msh_printf("用法: set_dest_ip <ip_address>\r\n");
 		return;
 	}
@@ -286,7 +286,7 @@ static void msh_set_dest_port_callback(int argc, char *argv)
 {
 	if (argv[0] == 0)
 	{
-		msh_printf("当前目的端口:%d\r\n" , socket_0_tcp_dest_port);
+		msh_printf("当前目的端口:%d\r\n" , tcp_client_dest_port);
 		msh_printf("用法: set_dest_port <port>\r\n");
 		return;
 	}
@@ -324,7 +324,7 @@ static void msh_set_dest_port_callback(int argc, char *argv)
 		return;
 	}
 	
-	msh_printf("端口设置成功：%d" , socket_0_tcp_dest_port);
+	msh_printf("端口设置成功：%d" , tcp_client_dest_port);
 
 }
 
@@ -339,11 +339,11 @@ static void msh_find_callback(int argc, char *argv)
 
 	if(strstr(&argv[0] , "ip"))
 	{
-		msh_printf("当前目的ip:%d.%d.%d.%d\r\n" , socket_0_tcp_dest_ip[0] , socket_0_tcp_dest_ip[1] , socket_0_tcp_dest_ip[2] , socket_0_tcp_dest_ip[3]);
+		msh_printf("当前目的ip:%d.%d.%d.%d\r\n" , tcp_client_dest_ip[0] , tcp_client_dest_ip[1] , tcp_client_dest_ip[2] , tcp_client_dest_ip[3]);
 	}
 	else if(strstr(&argv[0] , "port"))
 	{
-		msh_printf("当前目的端口:%d\r\n" , socket_0_tcp_dest_port);
+		msh_printf("当前目的端口:%d\r\n" , tcp_client_dest_port);
 	}
 	else if(strstr(&argv[0] , "boot"))
 	{
@@ -366,8 +366,8 @@ static void msh_ipconfig_callback(int argc, char *argv)
     msh_printf(" DNS         : %d.%d.%d.%d\r\n",info.dns[0], info.dns[1], info.dns[2], info.dns[3]);
     msh_printf(" DHCP        : %s\r\n",info.dhcp == NETINFO_DHCP ? "DHCP" : "Static");
     msh_printf("--------------------------------------------\r\n");
-    msh_printf(" Dest IP     : %d.%d.%d.%d\r\n",socket_0_tcp_dest_ip[0], socket_0_tcp_dest_ip[1],socket_0_tcp_dest_ip[2], socket_0_tcp_dest_ip[3]);
-    msh_printf(" Dest Port   : %d\r\n", socket_0_tcp_dest_port);
+    msh_printf(" Dest IP     : %d.%d.%d.%d\r\n",tcp_client_dest_ip[0], tcp_client_dest_ip[1],tcp_client_dest_ip[2], tcp_client_dest_ip[3]);
+    msh_printf(" Dest Port   : %d\r\n", tcp_client_dest_port);
 }
 
 static void msh_sudo_callback(char *buf)
@@ -421,9 +421,9 @@ static void msh_board_info_callback(int argc, char *argv)
     msh_printf("Flash Latency WS:  %lu\r\n", flash_latency);
     msh_printf("\r\nTCP Client Default Config:\r\n");
     msh_printf("Dest TCP IP:       %d.%d.%d.%d\r\n",
-        socket_0_tcp_dest_ip[0], socket_0_tcp_dest_ip[1],
-        socket_0_tcp_dest_ip[2], socket_0_tcp_dest_ip[3]);
-    msh_printf("Dest TCP Port:     %u\r\n", socket_0_tcp_dest_port);
+        tcp_client_dest_ip[0], tcp_client_dest_ip[1],
+        tcp_client_dest_ip[2], tcp_client_dest_ip[3]);
+    msh_printf("Dest TCP Port:     %u\r\n", tcp_client_dest_port);
     msh_printf("===================================================\r\n");
 }
 

@@ -314,7 +314,7 @@
           </ArmAdsMisc>
           <Cads>
             <interw>1</interw>
-            <Optim>4</Optim>
+            <Optim>1</Optim>
             <oTime>0</oTime>
             <SplitLS>0</SplitLS>
             <OneElfS>1</OneElfS>
@@ -340,7 +340,7 @@
               <MiscControls>--no-multibyte-chars</MiscControls>
               <Define>USE_HAL_DRIVER,STM32F103xE</Define>
               <Undefine></Undefine>
-              <IncludePath>../Core/Inc;../Drivers/STM32F1xx_HAL_Driver/Inc;../Drivers/STM32F1xx_HAL_Driver/Inc/Legacy;../Drivers/CMSIS/Device/ST/STM32F1xx/Include;../Drivers/CMSIS/Include;../BSP/digital;../BSP/extern_flash;../BSP/HAL_FLASH;../BSP/ioLibrary_Driver/Application/loopback;../BSP/ioLibrary_Driver/Ethernet;../BSP/ioLibrary_Driver/Ethernet/W5500;../BSP/ioLibrary_Driver/Internet/DHCP;../BSP/ioLibrary_Driver;../BSP/lfs;../BSP/msh;..\BSP\env;..\BSP\cJSON</IncludePath>
+              <IncludePath>../Core/Inc;../Drivers/STM32F1xx_HAL_Driver/Inc;../Drivers/STM32F1xx_HAL_Driver/Inc/Legacy;../Drivers/CMSIS/Device/ST/STM32F1xx/Include;../Drivers/CMSIS/Include;../BSP/digital;../BSP/extern_flash;../BSP/HAL_FLASH;../BSP/ioLibrary_Driver/Application/loopback;../BSP/ioLibrary_Driver/Ethernet;../BSP/ioLibrary_Driver/Ethernet/W5500;../BSP/ioLibrary_Driver/Internet/DHCP;../BSP/ioLibrary_Driver;../BSP/lfs;../BSP/msh;..\BSP\env;..\BSP\cJSON;..\BSP\tinycrypt-latest\include</IncludePath>
             </VariousControls>
           </Cads>
           <Aads>
@@ -659,6 +659,36 @@
               <FileType>5</FileType>
               <FilePath>..\BSP\ioLibrary_Driver\Internet\DHCP\dhcp.h</FilePath>
             </File>
+            <File>
+              <FileName>app_w5500_tcp_server.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>..\BSP\ioLibrary_Driver\app_w5500_tcp_server.c</FilePath>
+            </File>
+            <File>
+              <FileName>app_w5500_tcp_server.h</FileName>
+              <FileType>5</FileType>
+              <FilePath>..\BSP\ioLibrary_Driver\app_w5500_tcp_server.h</FilePath>
+            </File>
+            <File>
+              <FileName>app_w5500_tcp_client.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>..\BSP\ioLibrary_Driver\app_w5500_tcp_client.c</FilePath>
+            </File>
+            <File>
+              <FileName>app_w5500_tcp_client.h</FileName>
+              <FileType>5</FileType>
+              <FilePath>..\BSP\ioLibrary_Driver\app_w5500_tcp_client.h</FilePath>
+            </File>
+            <File>
+              <FileName>app_w5500_udp.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>..\BSP\ioLibrary_Driver\app_w5500_udp.c</FilePath>
+            </File>
+            <File>
+              <FileName>app_w5500_udp.h</FileName>
+              <FileType>5</FileType>
+              <FilePath>..\BSP\ioLibrary_Driver\app_w5500_udp.h</FilePath>
+            </File>
           </Files>
         </Group>
         <Group>
@@ -768,6 +798,36 @@
               <FileName>cJSON_fieldManage.h</FileName>
               <FileType>5</FileType>
               <FilePath>..\BSP\cJSON\cJSON_fieldManage.h</FilePath>
+            </File>
+          </Files>
+        </Group>
+        <Group>
+          <GroupName>tinycrypt</GroupName>
+          <Files>
+            <File>
+              <FileName>tiny_aes.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>..\BSP\tinycrypt-latest\src\tiny_aes.c</FilePath>
+            </File>
+            <File>
+              <FileName>tiny_base64.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>..\BSP\tinycrypt-latest\src\tiny_base64.c</FilePath>
+            </File>
+            <File>
+              <FileName>tiny_md5.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>..\BSP\tinycrypt-latest\src\tiny_md5.c</FilePath>
+            </File>
+            <File>
+              <FileName>tiny_sha1.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>..\BSP\tinycrypt-latest\src\tiny_sha1.c</FilePath>
+            </File>
+            <File>
+              <FileName>tiny_sha2.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>..\BSP\tinycrypt-latest\src\tiny_sha2.c</FilePath>
             </File>
           </Files>
         </Group>
