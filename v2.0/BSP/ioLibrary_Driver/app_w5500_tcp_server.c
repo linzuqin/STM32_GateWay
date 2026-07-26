@@ -2,6 +2,8 @@
 #include "app_w5500.h"
 #include "lfs_user.h"
 #include "main.h"
+#include "crc32.h"
+#include "tiny_md5.h"
 
 #define DEBUG_ENABLE    1
 #define DEBUG_LOG "[ TCP-SERVER ]"
@@ -52,19 +54,53 @@ static void GetDev_ID(char *uid_str)
  * @param len 数据长度
  * @param ip 目标IP
  * @param port 目标端口
- * @brief tcp server专用的发送函数
+ * @brief tcp server专用的发送函数 会先计算出要发送的json字符串的md5 然后拆包并新增md5字段 在组包后发送
  * @author LinZuQin (1904499306@qq.com)
  * @date 2026-07-19 19:58:36
  * @copyright Copyright (c) 2026
  */
-static int app_w5500_tcp_server_send(uint8_t socket_id , uint8_t *buf , uint16_t len , uint8_t *ip , uint16_t port)
+static int app_w5500_tcp_server_send(uint8_t *buf , uint16_t len , uint8_t *ip , uint16_t port)
 {
 	int ret = -1;
+	uint8_t md5_output[16] = {0};
 	if(tcp_server_state == SOCK_ESTABLISHED)
 	{
-		ret = sendto(socket_id, (uint8_t *)buf, len, ip, port);
+		tiny_md5(buf , len , md5_output);
+		cJSON *root = cJSON_Parse((char *)buf);
+		if(root == NULL)
+		{
+			DEBUG_PRINT("send data format error\r\n");
+			ret = -2;
+
+		}
+		else 
+		{
+			cJSON_AddStringToObject(root , "md5" , (char *)md5_output);
+			char *str = cJSON_PrintUnformatted(root);
+			if(str == NULL)
+			{
+				DEBUG_PRINT("send data malloc fail\r\n");
+				ret = -3;
+			}
+			else
+			{
+				if (getSn_SR(TCP_SERVER_SOCKET) == SOCK_ESTABLISHED)
+				{
+					ret = send(TCP_SERVER_SOCKET, (uint8_t *)str, strlen(str));
+				}
+				else
+				{
+					ret = -1;
+					DEBUG_PRINT("tcp server socket state error\r\n");
+				}
+
+				free(str);
+			}
+			cJSON_Delete(root);
+		}
 	}
-	else {
+	else 
+	{
 		DEBUG_PRINT("state error\r\n");
 		ret = -1;
 	}
@@ -114,7 +150,16 @@ static int app_w5500_tcp_server_report(void)
 	cJSON_AddItemToObject(root, "Analog", Analog_js);
 
 	char *str = cJSON_PrintUnformatted(root);
-	ret = app_w5500_tcp_server_send(TCP_SERVER_SOCKET , (uint8_t *)str , strlen(str) , tcp_server_connect_ip , tcp_server_port);
+	ret = app_w5500_tcp_server_send((uint8_t *)str , strlen(str) , tcp_server_connect_ip , tcp_server_port);
+	
+	if(str != NULL)
+	{
+		free(str);
+	}
+	if(root != NULL)
+	{
+		cJSON_Delete(root);
+	}
 	return ret;
 }
 
@@ -195,7 +240,7 @@ void network_tcp_server_proc(void)
 					recv_buf[recv_len] = '\0';
 					DEBUG_PRINT("recv(%d): %s\r\n", recv_len, recv_buf);
 					
-					app_w5500_tcp_server_send(TCP_SERVER_SOCKET, recv_buf, recv_len , tcp_server_connect_ip , tcp_server_port);
+					app_w5500_tcp_server_send(recv_buf, recv_len , tcp_server_connect_ip , tcp_server_port);
 					// send(TCP_SERVER_SOCKET, recv_buf, recv_len);
 				}
 			}

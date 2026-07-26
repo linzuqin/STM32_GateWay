@@ -21,6 +21,7 @@
 #include "adc.h"
 #include "can.h"
 #include "dma.h"
+#include "i2c.h"
 #include "spi.h"
 #include "tim.h"
 #include "usart.h"
@@ -36,6 +37,12 @@
 #include "app_w25qxx.h"
 #include "app_w5500.h"
 #include "temp.h"
+#include "STTS22HTR.h"
+#include "Filter_manager.h"
+
+#include "app_flashdb.h"
+#include "dns.h"
+#include "mqtt_interface.h"
 
 /* USER CODE END Includes */
 
@@ -118,6 +125,7 @@ int main(void)
   MX_TIM2_Init();
   MX_ADC1_Init();
   MX_TIM3_Init();
+  MX_I2C1_Init();
   /* USER CODE BEGIN 2 */
 	HAL_UARTEx_ReceiveToIdle_DMA(&huart1 , u1_rx , sizeof(u1_rx));
 	HAL_UARTEx_ReceiveToIdle_DMA(&huart3 , u3_rx , sizeof(u3_rx));
@@ -129,13 +137,17 @@ int main(void)
 	
 		/* wizchip init */
 
-	lfs_info_init(1);
-	test_folder_and_file();
+//	lfs_info_init(1);
+//	test_folder_and_file();
 	/* read flash dest ip and port*/
-	lfs_user_read(dir_path , dest_ip_path , tcp_client_dest_ip , sizeof(tcp_client_dest_ip));
-	lfs_user_read(dir_path , dest_port_path , (uint8_t *)&tcp_client_dest_port , sizeof(tcp_client_dest_port));
+//	lfs_user_read(dir_path , dest_ip_path , tcp_client_dest_ip , sizeof(tcp_client_dest_ip));
+//	lfs_user_read(dir_path , dest_port_path , (uint8_t *)&tcp_client_dest_port , sizeof(tcp_client_dest_port));
 	msh_init();
-	wizchip_initialize();
+  wizchip_initialize();
+  filter_info_init();
+
+  /* FlashDB initialization */
+  app_flashdb_init();
   /* USER CODE END 2 */
 
   /* Infinite loop */
@@ -148,10 +160,10 @@ int main(void)
     Set_digital(3 , 0);
     msh_process();
     Set_digital_State_refresh();
-//		loopback_tcpc(SOCKET_ID, ethernet_buf, socket_0_tcp_dest_ip, socket_0_tcp_dest_port);
 		network_proc();
 
 		__HAL_TIM_SetCompare(&htim2 , TIM_CHANNEL_2 , 60);
+    HAL_Delay(10);
     /* USER CODE END WHILE */
 
     /* USER CODE BEGIN 3 */
@@ -220,7 +232,10 @@ void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim)
 	if(htim->Instance == TIM3)
 	{
 		DHCP_time_handler();
+		DNS_time_handler();
+    MilliTimer_Handler();
 		// tcp_1s_callback();
+    
 	}
 }
 /* USER CODE END 4 */

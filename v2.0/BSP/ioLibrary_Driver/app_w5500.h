@@ -3,11 +3,14 @@
 #include "app_w5500_tcp_client.h"
 #include "app_w5500_tcp_server.h"
 #include "app_w5500_udp.h"
+#include "app_w5500_mqtt.h"
 
 
 #define TCP_SOCKET	0
 #define UDP_SOCKET  1
 #define TCP_SERVER_SOCKET 2
+#define MQTT_SOCKET 3
+#define DNS_SOCKET      4 
 
 typedef enum
 {

@@ -6,6 +6,7 @@
 #include "wiz_platform.h"
 #include "app_w5500.h"
 #include "temp.h"
+#include "STTS22HTR.h"
 
 #define MCU_UID_BASE    ((uint32_t)0x1FFFF7E8)
 typedef struct
@@ -21,10 +22,7 @@ static void msh_help_callback(int argc, char *argv);
 static void msh_reboot_callback(int argc, char *argv);
 static void msh_test_callback(int argc, char *argv);
 static void msh_clean_flash_callback(int argc, char *argv);
-static void msh_ls_flash_callback(int argc, char *argv);
-static void msh_cat_callback(int argc, char *argv);
 static void msh_set_dest_ip_callback(int argc, char *argv);
-static void msh_set_dest_port_callback(int argc, char *argv);
 static void msh_find_callback(int argc, char *argv);
 static void msh_ipconfig_callback(int argc, char *argv);
 static void msh_board_info_callback(int argc, char *argv);
@@ -37,15 +35,12 @@ static char arg[MSH_PROFILE_MAX_LEN] = {0};
 
 msh_cmd_table_t msh_cmd_table[] = {
 	{"help" , "show all msh help" , msh_help_callback},
-	{"ls" , "ls <dir> - list directory" , msh_ls_flash_callback},
 	{"reboot" , "reboot system" , msh_reboot_callback},
 	{"test" , "process test demo" , msh_test_callback},
-	{"cat" , "cat <file> - print file content" , msh_cat_callback},
 	{"clean_flash" , "clean extern flash" , msh_clean_flash_callback},
 	{"find" , "find params" , msh_find_callback},
 	{"ipconfig" , "show network config" , msh_ipconfig_callback},
 	{"set_dest_ip" , "set dest IP address" , msh_set_dest_ip_callback},
-	{"set_dest_port" , "set dest port" , msh_set_dest_port_callback},
 	{"board_info" , "get board info params" , msh_board_info_callback}
 };
 
@@ -164,78 +159,6 @@ static void msh_clean_flash_callback(int argc, char *argv)
 	system_reboot();
 }
 
-static void msh_ls_flash_callback(int argc, char *argv)
-{
-	int ret;
-	char list[256];
-
-	if(argv[0] == 0)
-	{
-		/*无参数时默认列出根目录*/
-		ret = lfs_user_listdir("/", list, sizeof(list));
-		if (ret >= 0)
-			msh_printf("内容:\n%s", list);
-		else
-			msh_printf("列出根目录失败: err=%d\r\n", ret);
-		return;
-	}
-
-	/*列出指定目录*/
-	char *file = argv;
-
-	ret = lfs_user_isdir(file);
-	if (ret != 1)
-	{
-		msh_printf("%s 目录不存在\r\n", file);
-		return;
-	}
-
-	memset(list, 0, sizeof(list));
-	ret = lfs_user_listdir(file, list, sizeof(list));
-	if (ret >= 0)
-	{
-		msh_printf("%s 内容:\n%s", file, list);
-	}
-}
-
-static void msh_cat_callback(int argc, char *argv)
-{
-	int ret;
-	uint8_t buf[512];
-
-	/* 检查是否有传入路径 */
-	if (argv[0] == 0)
-	{
-		msh_printf("用法: cat <file>\r\n");
-		return;
-	}
-
-	char *file = argv;
-
-	/*检查文件是否存在*/
-	ret = lfs_user_exist(file);
-	if (ret == 0)
-	{
-		msh_printf("%s 不存在\r\n", file);
-		return;
-	}
-
-	ret = lfs_user_isdir(file);
-	if (ret == 1)
-	{
-		msh_printf("%s 传入的文件路径异常\r\n", file);
-		return;
-	}
-
-	/*读取文件内容*/
-	memset(buf, 0, sizeof(buf));
-	ret = lfs_user_read_file(file, buf, sizeof(buf) - 1);
-	if (ret < 0)
-	{
-		msh_printf("读取%s失败: err=%d\r\n", file, ret);
-		return;
-	}
-}
 
 static void msh_set_dest_ip_callback(int argc, char *argv)
 {
@@ -253,80 +176,8 @@ static void msh_set_dest_ip_callback(int argc, char *argv)
 		return;
 	}
 
-	ret = lfs_user_isdir(dir_path);
-	if (ret == 1)
-	{
-		msh_printf("[OK]  确认 %s 是目录\n" , dir_path);
-	}
-	else
-	{
-		ret = lfs_user_mkdir(dir_path);
-		if (ret != LFS_ERR_OK)
-		{
-			msh_printf("[FAIL] 创建文件夹 %s 失败: err=%d\n",dir_path , ret);
-			return;
-		}
-	}
-
-	if(lfs_user_exist(dest_ip_path) == 0)
-	{
-		msh_printf("未检测到%s 创建%s\r\n", dest_ip_path, dest_ip_path);
-	}
-	uint8_t ip[4] = {(uint8_t)octet[0], (uint8_t)octet[1], (uint8_t)octet[2], (uint8_t)octet[3]};
-	ret = lfs_user_write_file(dest_ip_path, ip, sizeof(ip));
-	if (ret < 0)
-	{
-		msh_printf("[FAIL] 写入 %s 失败: err=%d\n", dest_ip_path , ret);
-		return;
-	}
-	msh_printf("ip地址设置成功：%d.%d.%d.%d" , ip[0] , ip[1] , ip[2] , ip[3]);
 }
 
-static void msh_set_dest_port_callback(int argc, char *argv)
-{
-	if (argv[0] == 0)
-	{
-		msh_printf("当前目的端口:%d\r\n" , tcp_client_dest_port);
-		msh_printf("用法: set_dest_port <port>\r\n");
-		return;
-	}
-	uint16_t port = 0;
-	int ret = sscanf(argv , "%hu" , &port);
-	if(ret != 1)
-	{
-		msh_printf("端口格式错误\r\n");
-		return;
-	}
-
-	ret = lfs_user_isdir(dir_path);
-	if (ret == 1)
-	{
-		msh_printf("[OK]  确认 %s 是目录\n" , dir_path);
-	}
-	else
-	{
-		ret = lfs_user_mkdir(dir_path);
-		if (ret != LFS_ERR_OK)
-		{
-			msh_printf("[FAIL] 创建文件夹 %s 失败: err=%d\n",dir_path , ret);
-			return;
-		}
-	}
-
-	if(lfs_user_exist(dest_port_path) == 0)
-	{
-		msh_printf("未检测到%s 创建%s\r\n", dest_port_path, dest_port_path);
-	}
-	ret = lfs_user_write_file(dest_port_path, &port, sizeof(port));
-	if (ret < 0)
-	{
-		msh_printf("[FAIL] 写入 %s 失败: err=%d\n", dest_port_path , ret);
-		return;
-	}
-	
-	msh_printf("端口设置成功：%d" , tcp_client_dest_port);
-
-}
 
 static void msh_find_callback(int argc, char *argv)
 {
@@ -412,7 +263,9 @@ static void msh_board_info_callback(int argc, char *argv)
     msh_printf("MCU Part Number:   STM32F103RET6\r\n");
     msh_printf("Chip Unique UID:   %08X-%08X-%08X\r\n", uid.uid0, uid.uid1, uid.uid2);
     msh_printf("Boot Counter:      %lu\r\n", boot);
-    msh_printf("MCU Internal Temp: %.2f ℃\r\n", chip_temp);
+    msh_printf("MCU Internal Temp: %.3f ℃\r\n", chip_temp);
+    msh_printf("Board Temp: %.3f ℃\r\n", Get_temp());
+
     msh_printf("\r\nSystem Clock Info:\r\n");
     msh_printf("SYSCLK Core:       %lu MHz\r\n", sysclk_mhz);
     msh_printf("AHB HCLK:          %lu MHz\r\n", hclk_mhz);

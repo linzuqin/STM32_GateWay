@@ -1,6 +1,5 @@
 #include "app_w5500_udp.h"
 #include "app_w5500.h"
-#include "lfs_user.h"
 
 #define DEBUG_ENABLE    1
 #define DEBUG_LOG "[ UDP ]"
@@ -27,8 +26,14 @@ static uint16_t udp_client_port = 0;             // 最近一次收到UDP数据�
 static int app_w5500_udp_send(uint8_t socket_id , uint8_t *buf , uint16_t len , uint8_t *ip , uint16_t port)
 {	
 	int ret = -1;
-
-	ret = sendto(socket_id, (uint8_t *)buf, len, ip, port);
+	if(getSn_SR(UDP_SOCKET) == SOCK_UDP)
+	{
+		ret = sendto(socket_id, (uint8_t *)buf, len, ip, port);
+	}
+	else
+	{
+		ret = -1;
+	}
 	return ret;
 }
 
@@ -349,7 +354,7 @@ void network_udp_proc(void)
 								close(TCP_SOCKET);
 //								tcp_send_flag = 0;
 
-								lfs_user_save_tcp_client_dest_info(tcp_client_dest_ip , tcp_client_dest_port);
+//								lfs_user_save_tcp_client_dest_info(tcp_client_dest_ip , tcp_client_dest_port);
 							}
 						}
 						break;

@@ -29,8 +29,14 @@ static uint16_t tcp_client_send_flag = 0;
 static int app_w5500_tcp_client_send(uint8_t socket_id , uint8_t *buf , uint16_t len , uint8_t *ip , uint16_t port)
 {
 	int ret = -1;
-
-	ret = sendto(socket_id, (uint8_t *)buf, len, ip, port);
+	if (getSn_SR(TCP_SOCKET) == SOCK_ESTABLISHED)
+	{
+		ret = send(socket_id, (uint8_t *)buf, len);
+	}
+	else
+	{
+		DEBUG_PRINT("tcp client state error\r\n");
+	}
 	return ret;
 }
 

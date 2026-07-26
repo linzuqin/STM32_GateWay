@@ -1,0 +1,15 @@
+v2.0\fdb_tsdb.o: ..\BSP\FlashDB\src\fdb_tsdb.c
+v2.0\fdb_tsdb.o: E:\KEIL\CORE\ARM\ARM_Compiler_5.06u7\Bin\..\include\inttypes.h
+v2.0\fdb_tsdb.o: E:\KEIL\CORE\ARM\ARM_Compiler_5.06u7\Bin\..\include\stdint.h
+v2.0\fdb_tsdb.o: E:\KEIL\CORE\ARM\ARM_Compiler_5.06u7\Bin\..\include\string.h
+v2.0\fdb_tsdb.o: ..\BSP\FlashDB\inc\flashdb.h
+v2.0\fdb_tsdb.o: E:\KEIL\CORE\ARM\ARM_Compiler_5.06u7\Bin\..\include\stddef.h
+v2.0\fdb_tsdb.o: E:\KEIL\CORE\ARM\ARM_Compiler_5.06u7\Bin\..\include\stdbool.h
+v2.0\fdb_tsdb.o: E:\KEIL\CORE\ARM\ARM_Compiler_5.06u7\Bin\..\include\stdio.h
+v2.0\fdb_tsdb.o: E:\KEIL\CORE\ARM\ARM_Compiler_5.06u7\Bin\..\include\time.h
+v2.0\fdb_tsdb.o: ..\BSP\FlashDB\inc\fdb_cfg.h
+v2.0\fdb_tsdb.o: ..\BSP\FlashDB\port\fal\inc\fal.h
+v2.0\fdb_tsdb.o: ..\BSP\FlashDB\port\fal\inc\fal_cfg.h
+v2.0\fdb_tsdb.o: ..\BSP\FlashDB\port\fal\inc\fal_def.h
+v2.0\fdb_tsdb.o: ..\BSP\FlashDB\inc\fdb_def.h
+v2.0\fdb_tsdb.o: ..\BSP\FlashDB\inc\fdb_low_lvl.h

@@ -1,0 +1,11 @@
+v2.0\mqttsubscribeserver.o: ..\BSP\ioLibrary_Driver\Internet\MQTT\MQTTPacket\src\MQTTSubscribeServer.c
+v2.0\mqttsubscribeserver.o: ..\BSP\ioLibrary_Driver\Internet\MQTT\MQTTPacket\src\MQTTPacket.h
+v2.0\mqttsubscribeserver.o: ..\BSP\ioLibrary_Driver\Internet\MQTT\MQTTPacket\src\MQTTConnect.h
+v2.0\mqttsubscribeserver.o: ..\BSP\ioLibrary_Driver\Internet\MQTT\MQTTPacket\src\MQTTPublish.h
+v2.0\mqttsubscribeserver.o: ..\BSP\ioLibrary_Driver\Internet\MQTT\MQTTPacket\src\MQTTSubscribe.h
+v2.0\mqttsubscribeserver.o: ..\BSP\ioLibrary_Driver\Internet\MQTT\MQTTPacket\src\MQTTUnsubscribe.h
+v2.0\mqttsubscribeserver.o: ..\BSP\ioLibrary_Driver\Internet\MQTT\MQTTPacket\src\MQTTFormat.h
+v2.0\mqttsubscribeserver.o: ..\BSP\ioLibrary_Driver\Internet\MQTT\MQTTPacket\src\StackTrace.h
+v2.0\mqttsubscribeserver.o: E:\KEIL\CORE\ARM\ARM_Compiler_5.06u7\Bin\..\include\stdio.h
+v2.0\mqttsubscribeserver.o: ..\BSP\ioLibrary_Driver\Internet\MQTT\MQTTPacket\src\MQTTPacket.h
+v2.0\mqttsubscribeserver.o: E:\KEIL\CORE\ARM\ARM_Compiler_5.06u7\Bin\..\include\string.h
