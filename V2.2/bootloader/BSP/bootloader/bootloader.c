@@ -181,7 +181,7 @@ static void bootloader_jump_to_app(void)
         return;
     }
 
-    //3. 设置栈顶指针 并�?�用所有中�?
+    //3. 设置栈顶指针
     disable_interrupts(); //禁用所有中�?
     set_msp(msp_address); //设置栈顶指针
 
