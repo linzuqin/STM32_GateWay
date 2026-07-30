@@ -137,34 +137,26 @@ int main(void)
 //	HAL_CAN_Start(&hcan);
 	
 	board_temp_init(); // ADC自校准，提升精度
-	
-		/* wizchip init */
-
-//	lfs_info_init(1);
-//	test_folder_and_file();
-	/* read flash dest ip and port*/
-//	lfs_user_read(dir_path , dest_ip_path , tcp_client_dest_ip , sizeof(tcp_client_dest_ip));
-//	lfs_user_read(dir_path , dest_port_path , (uint8_t *)&tcp_client_dest_port , sizeof(tcp_client_dest_port));
 	msh_init();
   wizchip_initialize();
   filter_info_init();
 
   /* FlashDB initialization */
   app_flashdb_init();
+  app_w5500_tcp_client_init(); //w5500 tcp client 参数初始化
+
   /* USER CODE END 2 */
 
   /* Infinite loop */
   /* USER CODE BEGIN WHILE */
   while (1)
   {
-    Set_digital(0 , 1);
-    Set_digital(1 , 0);
-    Set_digital(2 , 1);
-    Set_digital(3 , 0);
+    Set_digital_State_refresh();
     msh_process();
     Set_digital_State_refresh();
 		network_proc();
 		__HAL_TIM_SetCompare(&htim2 , TIM_CHANNEL_2 , 60);
+
     HAL_Delay(10);
     /* USER CODE END WHILE */
 

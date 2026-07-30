@@ -20,6 +20,7 @@ extern uint16_t tcp_client_dest_port;
 
 void network_tcp_client_proc(void);
 void tcp_client_1s_callback(void);
+void app_w5500_tcp_client_init(void);
 
 
 #endif

@@ -46,7 +46,7 @@ void network_proc(void)
 	}
 	else
 	{
-//		network_tcp_proc();
+		network_tcp_client_proc();
 		network_tcp_server_proc(); // TCP服务器处理
 		network_udp_proc();        // UDP服务器处理
 		app_w5500_mqtt_proc();

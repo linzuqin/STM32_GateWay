@@ -1,11 +1,12 @@
 #include "app_w5500_tcp_client.h"
 #include "app_w5500.h"
 #include "lfs_user.h"
+#include "app_flashdb.h"
 
 #define DEBUG_ENABLE    1
 #define DEBUG_LOG "[ TCP-CLIENT ]"
 #define DEBUG_PRINT(fmt, ...) do {if (DEBUG_ENABLE) printf(DEBUG_LOG "[%s:%d] " fmt "\n", __FILE__, __LINE__, ##__VA_ARGS__);} while (0)
-
+#define DEFAULT_CLIENT_INFO	"192.168.1.10:2345"
 
 uint16_t tcp_client_send_interval = 10;//tcp client send interval ,s
 
@@ -13,6 +14,32 @@ uint16_t tcp_client_send_interval = 10;//tcp client send interval ,s
 uint8_t tcp_client_dest_ip[4] = {192, 168, 1, 10};
 uint16_t tcp_client_dest_port = 2345;
 static uint16_t tcp_client_send_flag = 0;
+
+void app_w5500_tcp_client_init(void)
+{
+	char client_info[32] = {0};
+	int ip[4] = {0,0,0,0};
+	int port = 0;
+
+	if(app_flashdb_get("client_info" , client_info , sizeof(client_info)) == 0) //等于0说明key未找到
+	{
+		memset(client_info , 0 , sizeof(client_info));
+		memcpy(client_info , DEFAULT_CLIENT_INFO , sizeof(client_info));
+		if(app_flashdb_set("client_info" , client_info , sizeof(client_info)) == 0)
+		{
+			DEBUG_PRINT("no find client_info key , set default info\r\n");
+		}
+	}
+
+	sscanf(client_info , "%d.%d.%d.%d:%d" , &ip[0] ,&ip[1] ,&ip[2] ,&ip[3] , &port);
+	tcp_client_dest_ip[0] = ip[0];
+	tcp_client_dest_ip[1] = ip[1];
+	tcp_client_dest_ip[2] = ip[2];
+	tcp_client_dest_ip[3] = ip[3];
+	tcp_client_dest_port = port;
+	DEBUG_PRINT("success get ip info , ip:%d.%d.%d.%d:%d\r\n" , tcp_client_dest_ip[0] ,tcp_client_dest_ip[1] ,tcp_client_dest_ip[2] ,tcp_client_dest_ip[3] , tcp_client_dest_port);
+
+}
 
 /**
  * 

@@ -3,7 +3,7 @@
 
 #include <stdint.h>
 
-#define digital_NUM	4
+#define digital_NUM	5
 
 typedef enum{
 	OUTPUT_IO = 0,
@@ -60,8 +60,8 @@ void digital_disable(uint16_t ch);
 /**
  * 注册通道回调函数
  * @param ch 需要注册的通道下标
- * @param read_callback 注册的读取回调函数
- * @param set_callback 注册的写入回调函数
+ * @param read_callback 注册的�?�取回调函数
+ * @param set_callback 注册的写入回调函�?
  * @return digital_err_t 
  * @author LinZuQin (1904499306@qq.com)
  * @date 2026-06-06 23:16:31
@@ -70,9 +70,9 @@ void digital_disable(uint16_t ch);
 digital_err_t digital_callback_register(uint16_t ch , digital_callback read_callback , digital_callback set_callback);
 
 /**
- * 设置单个通道状态(跳过失能的通道)
- * @param ch 对应通道的下标
- * @param state 需要设置的通道状态
+ * 设置单个通道状�?(跳过失能的通道)
+ * @param ch 对应通道的下�?
+ * @param state 需要�?�置的通道状�?
  * @return digital_err_t 
  * @author LinZuQin (1904499306@qq.com)
  * @date 2026-06-06 23:17:05
@@ -88,10 +88,10 @@ digital_err_t Set_digital(uint16_t ch , uint8_t state);
  * @date 2026-06-06 23:18:03
  * @copyright Copyright (c) 2026
  */
-digital_err_t Read_digital_State(uint16_t ch);
+digital_pin_state_t Read_digital_State(uint16_t ch);
 
 /**
- * 读取所有通道状态 并更新到read_state(跳过失能的通道)
+ * 读取所有通道状�? 并更新到read_state(跳过失能的通道)
  * @return digital_err_t 
  * @author LinZuQin (1904499306@qq.com)
  * @date 2026-06-06 23:18:27
@@ -100,7 +100,7 @@ digital_err_t Read_digital_State(uint16_t ch);
 digital_err_t Read_ALL_digital_State(void);
 
 /**
- * 调用底层digital_write_func 写入状态(跳过失能的通道)
+ * 调用底层digital_write_func 写入状�?(跳过失能的通道)
  * @return digital_err_t 
  * @author LinZuQin (1904499306@qq.com)
  * @date 2026-06-06 23:18:55

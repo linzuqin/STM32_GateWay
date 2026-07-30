@@ -7,8 +7,15 @@
 #include "app_w5500.h"
 #include "temp.h"
 #include "STTS22HTR.h"
+#include "app_flashdb.h"
+#include "digital.h"
 
 #define MCU_UID_BASE    ((uint32_t)0x1FFFF7E8)
+
+#define DEBUG_ENABLE    1
+#define DEBUG_LOG "[ MSH ]"
+#define DEBUG_PRINT(fmt, ...) do {if (DEBUG_ENABLE) printf(DEBUG_LOG "[%s:%d] " fmt "\n", __FILE__, __LINE__, ##__VA_ARGS__);} while (0)
+
 typedef struct
 {
   uint32_t uid0;
@@ -22,10 +29,12 @@ static void msh_help_callback(int argc, char *argv);
 static void msh_reboot_callback(int argc, char *argv);
 static void msh_test_callback(int argc, char *argv);
 static void msh_clean_flash_callback(int argc, char *argv);
-static void msh_set_dest_ip_callback(int argc, char *argv);
+static void msh_set_client_ip_callback(int argc, char *argv);
 static void msh_find_callback(int argc, char *argv);
 static void msh_ipconfig_callback(int argc, char *argv);
 static void msh_board_info_callback(int argc, char *argv);
+static void set_digital_info_callback(int argc, char *argv);
+static void get_digital_info_callback(int argc, char *argv);
 
 static uint8_t msh_recv_flag = 0;
 extern uint32_t boot;
@@ -40,8 +49,11 @@ msh_cmd_table_t msh_cmd_table[] = {
 	{"clean_flash" , "clean extern flash" , msh_clean_flash_callback},
 	{"find" , "find params" , msh_find_callback},
 	{"ipconfig" , "show network config" , msh_ipconfig_callback},
-	{"set_dest_ip" , "set dest IP address" , msh_set_dest_ip_callback},
-	{"board_info" , "get board info params" , msh_board_info_callback}
+	{"set_ip" , "set dest IP address and port" , msh_set_client_ip_callback},
+	{"board_info" , "get board info params" , msh_board_info_callback},
+	{"set_digital" , "set point digital out" , set_digital_info_callback},
+	{"get_digital" , "get point digital state" , get_digital_info_callback}
+
 };
 
 /**
@@ -64,7 +76,7 @@ void msh_rx_data(uint8_t *data , uint16_t size)
 
 /**
  * 
- * @brief 文本输出函数 需要根据硬件自定义
+ * @brief 文本输出函数 硬件输出自定义
  * @author LinZuQin (1904499306@qq.com)
  * @date 2026-06-28 15:06:41
  * @copyright Copyright (c) 2026
@@ -88,6 +100,15 @@ void system_reboot(void)
     HAL_NVIC_SystemReset();
 }
 
+/**
+ * 
+ * @brief msh专用打印函数 
+ * @param fmt 
+ * @param ... 
+ * @author LinZuQin (1904499306@qq.com)
+ * @date 2026-07-30 23:03:37
+ * @copyright Copyright (c) 2026
+ */
 void msh_printf(const char *fmt, ...)
 {
 	char String[100];
@@ -99,11 +120,29 @@ void msh_printf(const char *fmt, ...)
 
 }
 
+/**
+ * 
+ * @brief 指令默认回调函数 未指定回调函数时自动调用
+ * @param argc 
+ * @param argv 
+ * @author LinZuQin (1904499306@qq.com)
+ * @date 2026-07-30 23:03:49
+ * @copyright Copyright (c) 2026
+ */
 static void msh_default_callback(int argc, char *argv)
 {
     msh_printf("cmd process finish\r\n");
 }
 
+/**
+ * 
+ * @brief 帮助指令回调函数
+ * @param argc 
+ * @param argv 
+ * @author LinZuQin (1904499306@qq.com)
+ * @date 2026-07-30 23:06:07
+ * @copyright Copyright (c) 2026
+ */
 static void msh_help_callback(int argc, char *argv)
 {
 	uint16_t i =0;
@@ -122,7 +161,7 @@ static void msh_help_callback(int argc, char *argv)
 		}
 		if(i == size)
 		{
-			msh_printf("未找到指定路径\r\n");
+			msh_printf("未找到指令\r\n");
 		}
 	}
 	else
@@ -152,6 +191,15 @@ static void msh_test_callback(int argc, char *argv)
     msh_printf("syetem test start.....\r\n");
 }
 
+/**
+ * 
+ * @brief 清理外部flash 
+ * @param argc 
+ * @param argv 
+ * @author LinZuQin (1904499306@qq.com)
+ * @date 2026-07-30 23:03:23
+ * @copyright Copyright (c) 2026
+ */
 static void msh_clean_flash_callback(int argc, char *argv)
 {
 	app_w25qxx_chip_erase();
@@ -160,20 +208,35 @@ static void msh_clean_flash_callback(int argc, char *argv)
 }
 
 
-static void msh_set_dest_ip_callback(int argc, char *argv)
+static void msh_set_client_ip_callback(int argc, char *argv)
 {
 	if (argv[0] == 0)
 	{
-		msh_printf("当前目的ip:%d.%d.%d.%d\r\n" , tcp_client_dest_ip[0] , tcp_client_dest_ip[1] , tcp_client_dest_ip[2] , tcp_client_dest_ip[3]);
+		msh_printf("当前ip:%d.%d.%d.%d\r\n" , tcp_client_dest_ip[0] , tcp_client_dest_ip[1] , tcp_client_dest_ip[2] , tcp_client_dest_ip[3]);
 		msh_printf("用法: set_dest_ip <ip_address>\r\n");
 		return;
 	}
-	int octet[4] = {0};
-	int ret = sscanf(argv , "%d.%d.%d.%d" , &octet[0] , &octet[1] , &octet[2] , &octet[3]);
-	if(ret != 4)
+	int ip[4] = {0};
+	int port = 0;
+	int ret = sscanf(argv , "%d.%d.%d.%d:%d" , &ip[0] , &ip[1] , &ip[2] , &ip[3] , &port);
+	if(ret != 5)
 	{
 		msh_printf("IP地址格式错误\r\n");
 		return;
+	}
+	else
+	{
+		tcp_client_dest_ip[0] = ip[0];
+		tcp_client_dest_ip[1] = ip[1];
+		tcp_client_dest_ip[2] = ip[2];
+		tcp_client_dest_ip[3] = ip[3];
+		tcp_client_dest_port = port;
+		char client_info[32] = {0};
+		sprintf(client_info , "%d.%d.%d.%d:%d" , tcp_client_dest_ip[0] ,tcp_client_dest_ip[1] , tcp_client_dest_ip[2] , tcp_client_dest_ip[3] , tcp_client_dest_port);
+		if(app_flashdb_set("client_info" , client_info , sizeof(client_info)) == 0)
+		{
+			msh_printf("ip info refresh , new ip:%d.%d.%d.%d port:%d\r\n" ,tcp_client_dest_ip[0] ,tcp_client_dest_ip[1] , tcp_client_dest_ip[2] , tcp_client_dest_ip[3] , tcp_client_dest_port);
+		}
 	}
 
 }
@@ -190,11 +253,7 @@ static void msh_find_callback(int argc, char *argv)
 
 	if(strstr(&argv[0] , "ip"))
 	{
-		msh_printf("当前目的ip:%d.%d.%d.%d\r\n" , tcp_client_dest_ip[0] , tcp_client_dest_ip[1] , tcp_client_dest_ip[2] , tcp_client_dest_ip[3]);
-	}
-	else if(strstr(&argv[0] , "port"))
-	{
-		msh_printf("当前目的端口:%d\r\n" , tcp_client_dest_port);
+		msh_printf("当前ip:%d.%d.%d.%d:%d\r\n" , tcp_client_dest_ip[0] , tcp_client_dest_ip[1] , tcp_client_dest_ip[2] , tcp_client_dest_ip[3] , tcp_client_dest_port);
 	}
 	else if(strstr(&argv[0] , "boot"))
 	{
@@ -239,6 +298,15 @@ static void msh_sudo_callback(char *buf)
     }
 }
 
+/**
+ * 
+ * @brief 打印板载信息指令
+ * @param argc 
+ * @param argv 
+ * @author LinZuQin (1904499306@qq.com)
+ * @date 2026-07-30 23:03:01
+ * @copyright Copyright (c) 2026
+ */
 static void msh_board_info_callback(int argc, char *argv)
 {
     RCC_ClkInitTypeDef clk_cfg;
@@ -247,12 +315,12 @@ static void msh_board_info_callback(int argc, char *argv)
     HAL_RCC_GetClockConfig(&clk_cfg, &flash_latency);
 
     // 计算各总线时钟 MHz
-    uint32_t sysclk_mhz = clk_cfg.SYSCLKSource / 1000000U;
-    uint32_t hclk_mhz   = clk_cfg.AHBCLKDivider / 1000000U;
-    uint32_t pclk1_mhz  = clk_cfg.APB1CLKDivider / 1000000U;
-    uint32_t pclk2_mhz  = clk_cfg.APB2CLKDivider / 1000000U;
+//    uint32_t sysclk_mhz = clk_cfg.SYSCLKSource / 1000000U;
+//    uint32_t hclk_mhz   = clk_cfg.AHBCLKDivider / 1000000U;
+//    uint32_t pclk1_mhz  = clk_cfg.APB1CLKDivider / 1000000U;
+//    uint32_t pclk2_mhz  = clk_cfg.APB2CLKDivider / 1000000U;
 
-    // 读取内部芯片温度
+    // 读取内部�?片温�?
     float chip_temp = board_temp_get();
 
     // 读取STM32原厂96位唯一UID
@@ -266,12 +334,12 @@ static void msh_board_info_callback(int argc, char *argv)
     msh_printf("MCU Internal Temp: %.3f ℃\r\n", chip_temp);
     msh_printf("Board Temp: %.3f ℃\r\n", Get_temp());
 
-    msh_printf("\r\nSystem Clock Info:\r\n");
-    msh_printf("SYSCLK Core:       %lu MHz\r\n", sysclk_mhz);
-    msh_printf("AHB HCLK:          %lu MHz\r\n", hclk_mhz);
-    msh_printf("APB1 PCLK1:        %lu MHz\r\n", pclk1_mhz);
-    msh_printf("APB2 PCLK2:        %lu MHz\r\n", pclk2_mhz);
-    msh_printf("Flash Latency WS:  %lu\r\n", flash_latency);
+    // msh_printf("\r\nSystem Clock Info:\r\n");
+    // msh_printf("SYSCLK Core:       %lu MHz\r\n", sysclk_mhz);
+    // msh_printf("AHB HCLK:          %lu MHz\r\n", hclk_mhz);
+    // msh_printf("APB1 PCLK1:        %lu MHz\r\n", pclk1_mhz);
+    // msh_printf("APB2 PCLK2:        %lu MHz\r\n", pclk2_mhz);
+    // msh_printf("Flash Latency WS:  %lu\r\n", flash_latency);
     msh_printf("\r\nTCP Client Default Config:\r\n");
     msh_printf("Dest TCP IP:       %d.%d.%d.%d\r\n",
         tcp_client_dest_ip[0], tcp_client_dest_ip[1],
@@ -280,9 +348,34 @@ static void msh_board_info_callback(int argc, char *argv)
     msh_printf("===================================================\r\n");
 }
 
+static void set_digital_info_callback(int argc, char *argv)
+{
+	int digital_channle = 0;
+	int digital_state = 0;
+	if(sscanf(argv , "%d_%d" , &digital_channle , &digital_state)!= 2)
+	{
+		msh_printf("用法: set_digital <params>\r\n");
+		msh_printf("for example:set_digital 0_1\r\n");
+	}
+	else
+	{
+		Set_digital(digital_channle , digital_state);
+		msh_printf("成功设置数字量输出,通道:%d 状态:%d\r\n" , digital_channle , digital_state);
+	}
+
+}
+
+static void get_digital_info_callback(int argc, char *argv)
+{
+	int digital_channle = 0;
+	
+	sscanf(argv , "%d" , &digital_channle);
+	msh_printf("成功获取数字量,通道:%d 状态:%d\r\n" , digital_channle , Read_digital_State(digital_channle));
+}
+
 /**
  * 
- * @brief msh处理函数放在线程中循环调用
+ * @brief msh处理函数放在线程里调用
  * @author LinZuQin (1904499306@qq.com)
  * @date 2026-06-28 15:13:24
  * @copyright Copyright (c) 2026
@@ -313,21 +406,27 @@ void msh_process(void)
 		}
 		else if (strcmp(cmd, msh_cmd_table[i].cmd) == 0)
 		{
-				if (msh_cmd_table[i].callback != NULL)
-				{
-					msh_cmd_table[i].callback(0, arg);
-
-				}
-				else
-				msh_default_callback(0, msh_cmd_table[i].cmd);
-				memset(msh_buf, 0, sizeof(msh_buf));
-				msh_printf("\r\nmsh> ");
-				break;
+			if (msh_cmd_table[i].callback != NULL)
+			{
+				msh_cmd_table[i].callback(0, arg);
+			}
+			else
+			msh_default_callback(0, msh_cmd_table[i].cmd);
+			memset(msh_buf, 0, sizeof(msh_buf));
+			msh_printf("\r\nmsh> ");
+			break;
 		}
 
 	}
 }
 
+/**
+ * 
+ * @brief msh参数初始化
+ * @author LinZuQin (1904499306@qq.com)
+ * @date 2026-07-30 23:02:50
+ * @copyright Copyright (c) 2026
+ */
 void msh_init(void)
 {
 	msh_printf("MSH initialized.\r\n");

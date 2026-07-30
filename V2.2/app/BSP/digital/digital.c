@@ -7,7 +7,7 @@ static digital_info_t digital_params[digital_NUM] =
 	{
 		.identifier = "IO1",
 		.read_state = DIGITAL_PIN_RESET , 
-		.set_state = DIGITAL_PIN_RESET,
+		.set_state = DIGITAL_PIN_SET,
 		.port = (void *)OUT1_GPIO_Port,
 		.pin = OUT1_Pin,
 		.type = OUTPUT_IO,
@@ -23,6 +23,36 @@ static digital_info_t digital_params[digital_NUM] =
 		.type = OUTPUT_IO,
 		.enable = 1,
 	},
+	[2] = 
+	{
+		.identifier = "BEEP",
+		.read_state = DIGITAL_PIN_RESET , 
+		.set_state = DIGITAL_PIN_RESET,
+		.port = (void *)BEEP_GPIO_Port,
+		.pin = BEEP_Pin,
+		.type = OUTPUT_IO,
+		.enable = 1,
+	},	
+	[3] = 
+	{
+		.identifier = "LED",
+		.read_state = DIGITAL_PIN_RESET , 
+		.set_state = DIGITAL_PIN_RESET,
+		.port = (void *)USER_LED_GPIO_Port,
+		.pin = USER_LED_Pin,
+		.type = OUTPUT_IO,
+		.enable = 1,
+	},
+	[4] = 
+	{
+		.identifier = "KEY",
+		.read_state = DIGITAL_PIN_RESET , 
+		.set_state = DIGITAL_PIN_RESET,
+		.port = (void *)KEY_GPIO_Port,
+		.pin = KEY_Pin,
+		.type = INPUT_IO,
+		.enable = 1,
+	},	
 
 };
 
@@ -113,14 +143,14 @@ digital_err_t Set_digital(uint16_t ch , uint8_t state)
 }
 
 /**
- * 调用底层digital_read_func 读取单个通道状态并更新到read_state(跳过失能的通道)
+ * 调用底层digital_read_func 读取单个通道状态并返回
  * @param ch 通道下标
  * @return digital_err_t 
  * @author LinZuQin (1904499306@qq.com)
  * @date 2026-06-06 23:18:03
  * @copyright Copyright (c) 2026
  */
-digital_err_t Read_digital_State(uint16_t ch)
+digital_pin_state_t Read_digital_State(uint16_t ch)
 {
 	digital_info_t *dev = &digital_params[ch];;
 	digital_err_t ret = digital_OK;
@@ -128,18 +158,19 @@ digital_err_t Read_digital_State(uint16_t ch)
 	if(dev->enable == 0)
 	{
 		/*引脚未使能*/
-		ret = digital_ENABLE_ERROR;
+		
 	}
-	else {
-	dev->read_state = digital_read_func(dev->port , dev->pin);
+	else 
+	{
+		dev->read_state = digital_read_func(dev->port , dev->pin);
 		if(dev->read_callback == NULL){
 
 		}
 		else {
-			ret = dev->read_callback(ch , NULL);
+			dev->read_callback(ch , NULL);
 		}
 	}
-
+	ret = dev->read_state;
 	return ret;
 }
 
