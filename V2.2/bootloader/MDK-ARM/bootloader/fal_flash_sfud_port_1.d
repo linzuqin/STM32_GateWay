@@ -1,0 +1,12 @@
+bootloader\fal_flash_sfud_port_1.o: ..\BSP\FlashDB\port\fal\samples\porting\fal_flash_sfud_port.c
+bootloader\fal_flash_sfud_port_1.o: ../BSP/FlashDB/port/fal/inc/fal.h
+bootloader\fal_flash_sfud_port_1.o: ../BSP/FlashDB/port/fal/inc/fal_cfg.h
+bootloader\fal_flash_sfud_port_1.o: ../BSP/FlashDB/port/fal/inc/fal_def.h
+bootloader\fal_flash_sfud_port_1.o: E:\KEIL\CORE\ARM\ARM_Compiler_5.06u7\Bin\..\include\stdint.h
+bootloader\fal_flash_sfud_port_1.o: E:\KEIL\CORE\ARM\ARM_Compiler_5.06u7\Bin\..\include\stdio.h
+bootloader\fal_flash_sfud_port_1.o: E:\KEIL\CORE\ARM\ARM_Compiler_5.06u7\Bin\..\include\inttypes.h
+bootloader\fal_flash_sfud_port_1.o: ../BSP/sfud/inc/sfud.h
+bootloader\fal_flash_sfud_port_1.o: ../BSP/sfud/inc/sfud_def.h
+bootloader\fal_flash_sfud_port_1.o: E:\KEIL\CORE\ARM\ARM_Compiler_5.06u7\Bin\..\include\stdbool.h
+bootloader\fal_flash_sfud_port_1.o: ../BSP/sfud/inc/sfud_cfg.h
+bootloader\fal_flash_sfud_port_1.o: ../BSP/sfud/inc/sfud_flash_def.h

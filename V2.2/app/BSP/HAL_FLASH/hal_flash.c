@@ -1,7 +1,7 @@
 #include "hal_flash.h"
 #include "main.h"
 #include "string.h"
-#define USER_FLASH_START 0x08004400U
+
 //关闭全局中断函数
 static void disable_interrupts(void) 
 {
@@ -17,8 +17,7 @@ static void enable_interrupts(void)
 //读取flash函数 实现 0:成功 1:失败
 uint8_t flash_read(uint32_t address, uint8_t *data, uint32_t size) 
 {
-    address = address + USER_FLASH_START;
-    if (address < FLASH_BASE_ADDR || (address + size) > (FLASH_MAX_ADDR + 1) || address == 0 || size == 0)
+    if (address < FLASH_BASE_ADDR || (address + size) > (FLASH_MAX_ADDR + 1) || size == 0)
     {
         return 1;
     }
@@ -32,59 +31,64 @@ uint8_t flash_read(uint32_t address, uint8_t *data, uint32_t size)
     return 0; // 读取成功
 }
 
-//擦除flash函数 实现 0:成功 1:失败
-uint8_t flash_erase(uint32_t address, uint32_t size) 
+uint8_t flash_erase(uint32_t address, uint32_t size)
 {
-    address = address + USER_FLASH_START;
+    HAL_StatusTypeDef hal_status = HAL_OK;
+    FLASH_EraseInitTypeDef EraseInitStruct = {0};
+    uint32_t PageError = 0;
+    uint32_t page_start_addr, page_end_addr, nb_pages;
+    uint8_t ret = 1;
 
-    //1.对操作地址大小进行校验
-    if (address < FLASH_BASE_ADDR || (address + size) > (FLASH_MAX_ADDR + 1) || address == 0 || size == 0)
+    if (size == 0 || address == 0)
+    {
+        return 1;
+    }
+    if (address < FLASH_BASE_ADDR || (address + size) > (FLASH_MAX_ADDR + 1))
+    {
+        return 1;
+    }
+    if ((address % PAGE_SIZE) != 0)
     {
         return 1;
     }
 
-    //2.关闭中断 防止在执行flash操作的时候被中断打断
     disable_interrupts();
 
-    //3.执行flash操作
-    HAL_StatusTypeDef hal_status = HAL_OK;
-    uint32_t PageError = 0;
-    FLASH_EraseInitTypeDef EraseInitStruct = {0};
+    while (__HAL_FLASH_GET_FLAG(FLASH_FLAG_BSY));
+    __HAL_FLASH_CLEAR_FLAG(FLASH_FLAG_EOP | FLASH_FLAG_PGERR | FLASH_FLAG_WRPERR);
 
-    uint32_t offset = address - FLASH_BASE_ADDR;
-    uint32_t page_start_addr = FLASH_BASE_ADDR + ((offset / PAGE_SIZE) * PAGE_SIZE);
-    uint32_t page_end_addr = FLASH_BASE_ADDR + (((offset + size - 1) / PAGE_SIZE) * PAGE_SIZE);
-    uint32_t nb_pages = ((page_end_addr - page_start_addr) / PAGE_SIZE) + 1;
+    page_start_addr = address;
+    page_end_addr = address + size - 1;
+    nb_pages = ((page_end_addr - page_start_addr) / PAGE_SIZE) + 1;
 
-    EraseInitStruct.TypeErase = FLASH_TYPEERASE_PAGES;
+    EraseInitStruct.TypeErase   = FLASH_TYPEERASE_PAGES;
     EraseInitStruct.PageAddress = page_start_addr;
-    EraseInitStruct.NbPages = nb_pages;
+    EraseInitStruct.NbPages     = nb_pages;
 
     HAL_FLASH_Unlock();
-    __HAL_FLASH_CLEAR_FLAG(FLASH_FLAG_EOP | FLASH_FLAG_PGERR | FLASH_FLAG_WRPERR | FLASH_FLAG_BSY);
 
     hal_status = HAL_FLASHEx_Erase(&EraseInitStruct, &PageError);
-    if (hal_status != HAL_OK)
-    {
-        HAL_FLASH_Lock();
-        enable_interrupts();
-        return 1;
-    }
 
     HAL_FLASH_Lock();
 
-    //4.开启中断
+    if (hal_status == HAL_OK)
+    {
+        ret = 0;
+    }
+
+    /* 确保 Flash 操作完成，刷新指令预取缓冲 */
+    __DSB();
+    __ISB();
+
     enable_interrupts();
-    return 0; // 成功    
+    return ret;
 }
 
 //写入flash函数 实现 0:成功 1:失败
 uint8_t flash_write(uint32_t address, uint8_t *data, uint32_t size) 
 {
-    address = address + USER_FLASH_START;
-
     //1.对操作地址大小进行校验
-    if (address < FLASH_BASE_ADDR || (address + size) > (FLASH_MAX_ADDR + 1) || address == 0 || size == 0)
+    if (address < FLASH_BASE_ADDR || (address + size) > (FLASH_MAX_ADDR + 1) || size == 0)
     {
         return 1;
     }
@@ -123,6 +127,10 @@ uint8_t flash_write(uint32_t address, uint8_t *data, uint32_t size)
     }
 
     HAL_FLASH_Lock();
+
+    /* 确保 Flash 操作完成，刷新指令预取缓冲 */
+    __DSB();
+    __ISB();
 
     //6.开启中断
     enable_interrupts();

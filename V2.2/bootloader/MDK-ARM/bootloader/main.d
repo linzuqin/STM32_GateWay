@@ -25,5 +25,17 @@ bootloader\main.o: ../Drivers/STM32F1xx_HAL_Driver/Inc/stm32f1xx_hal_cortex.h
 bootloader\main.o: ../Drivers/STM32F1xx_HAL_Driver/Inc/stm32f1xx_hal_flash.h
 bootloader\main.o: ../Drivers/STM32F1xx_HAL_Driver/Inc/stm32f1xx_hal_flash_ex.h
 bootloader\main.o: ../Drivers/STM32F1xx_HAL_Driver/Inc/stm32f1xx_hal_pwr.h
+bootloader\main.o: ../Drivers/STM32F1xx_HAL_Driver/Inc/stm32f1xx_hal_spi.h
+bootloader\main.o: ../Drivers/STM32F1xx_HAL_Driver/Inc/stm32f1xx_hal_uart.h
+bootloader\main.o: ../Core/Inc/spi.h
+bootloader\main.o: ../Core/Inc/usart.h
 bootloader\main.o: ../Core/Inc/gpio.h
 bootloader\main.o: ../BSP/bootloader/bootloader.h
+bootloader\main.o: ..\..\app\BSP\HAL_FLASH\hal_flash.h
+bootloader\main.o: E:\KEIL\CORE\ARM\ARM_Compiler_5.06u7\Bin\..\include\stdio.h
+bootloader\main.o: E:\KEIL\CORE\ARM\ARM_Compiler_5.06u7\Bin\..\include\stdlib.h
+bootloader\main.o: ..\..\app\BSP\extern_flash\app_w25qxx.h
+bootloader\main.o: ..\..\app\BSP\extern_flash\driver_w25qxx.h
+bootloader\main.o: E:\KEIL\CORE\ARM\ARM_Compiler_5.06u7\Bin\..\include\string.h
+bootloader\main.o: ..\..\app\BSP\FlashDB\app_flashdb.h
+bootloader\main.o: ..\..\app\BSP\RTT\debug_print.h

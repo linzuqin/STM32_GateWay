@@ -9,6 +9,10 @@
 #include <stdio.h>
 #include <stdlib.h>
 
+#ifdef MSH_USE_RTT
+#include "SEGGER_RTT.h"
+#endif
+
 typedef struct{
     char cmd[MSH_CMD_MAX_LEN];
     char desc[MSH_PROFILE_MAX_LEN];

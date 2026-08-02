@@ -9,12 +9,14 @@
 #include "STTS22HTR.h"
 #include "app_flashdb.h"
 #include "digital.h"
+#include "app_w5500_ntp.h"
+#include "ota.h"
 
 #define MCU_UID_BASE    ((uint32_t)0x1FFFF7E8)
 
 #define DEBUG_ENABLE    1
 #define DEBUG_LOG "[ MSH ]"
-#define DEBUG_PRINT(fmt, ...) do {if (DEBUG_ENABLE) printf(DEBUG_LOG "[%s:%d] " fmt "\n", __FILE__, __LINE__, ##__VA_ARGS__);} while (0)
+#include "debug_print.h"
 
 typedef struct
 {
@@ -35,9 +37,14 @@ static void msh_ipconfig_callback(int argc, char *argv);
 static void msh_board_info_callback(int argc, char *argv);
 static void set_digital_info_callback(int argc, char *argv);
 static void get_digital_info_callback(int argc, char *argv);
+static void msh_time_callback(int argc, char *argv);
+static void ota_start_callback(int argc, char *argv);
 
 static uint8_t msh_recv_flag = 0;
-extern uint32_t boot;
+#if MSH_USE_RTT
+static uint8_t msh_buf_idx = 0;
+static uint8_t msh_esc_state = 0;  /* 0=正常, 1=收到ESC, 2=收到ESC[ */
+#endif
 
 static char cmd[MSH_CMD_MAX_LEN] = {0};
 static char arg[MSH_PROFILE_MAX_LEN] = {0};
@@ -52,7 +59,9 @@ msh_cmd_table_t msh_cmd_table[] = {
 	{"set_ip" , "set dest IP address and port" , msh_set_client_ip_callback},
 	{"board_info" , "get board info params" , msh_board_info_callback},
 	{"set_digital" , "set point digital out" , set_digital_info_callback},
-	{"get_digital" , "get point digital state" , get_digital_info_callback}
+	{"get_digital" , "get point digital state" , get_digital_info_callback},
+	{"time" , "get board time (NTP)" , msh_time_callback},
+	{"otaRun" , "start ota task" , ota_start_callback},
 
 };
 
@@ -83,9 +92,13 @@ void msh_rx_data(uint8_t *data , uint16_t size)
  */
 __attribute__((weak)) void msh_putc(char c)
 {
+#ifdef MSH_USE_RTT
     (void)c;
-//    #error please set putc function first
+    SEGGER_RTT_Write(0, &c, 1);
+#else
+    (void)c;
     HAL_UART_Transmit(&huart1 , (uint8_t *)&c , 1 , 1000);
+#endif
 }
 
 /**
@@ -116,8 +129,11 @@ void msh_printf(const char *fmt, ...)
 	va_start(arg, fmt);
 	vsprintf(String, fmt, arg);
 	va_end(arg);
+#ifdef MSH_USE_RTT
+	SEGGER_RTT_WriteString(0, String);
+#else
 	HAL_UART_Transmit(&huart1, (uint8_t *)String, strlen(String), HAL_MAX_DELAY);
-
+#endif
 }
 
 /**
@@ -257,7 +273,7 @@ static void msh_find_callback(int argc, char *argv)
 	}
 	else if(strstr(&argv[0] , "boot"))
 	{
-		msh_printf("当前开机次数:%d\r\n" , boot);
+		msh_printf("当前开机次数:%d\r\n" , Get_Boot());
 	}
 	else
 	{
@@ -330,7 +346,7 @@ static void msh_board_info_callback(int argc, char *argv)
     msh_printf("Hardware Model:    STM32F103RET6-W5500-V1.0\r\n");
     msh_printf("MCU Part Number:   STM32F103RET6\r\n");
     msh_printf("Chip Unique UID:   %08X-%08X-%08X\r\n", uid.uid0, uid.uid1, uid.uid2);
-    msh_printf("Boot Counter:      %lu\r\n", boot);
+    msh_printf("Boot Counter:      %lu\r\n", Get_Boot());
     msh_printf("MCU Internal Temp: %.3f ℃\r\n", chip_temp);
     msh_printf("Board Temp: %.3f ℃\r\n", Get_temp());
 
@@ -373,6 +389,43 @@ static void get_digital_info_callback(int argc, char *argv)
 	msh_printf("成功获取数字量,通道:%d 状态:%d\r\n" , digital_channle , Read_digital_State(digital_channle));
 }
 
+static void msh_time_callback(int argc, char *argv)
+{
+    ntp_time_t t;
+    NTP_State_t state = app_w5500_ntp_get_state();
+
+    if (state == NTP_SYNC_OK)
+    {
+        if (app_w5500_ntp_get_time(&t))
+        {
+            msh_printf("Board Time: %04d-%02d-%02d %02d:%02d:%02d\r\n",
+                t.year, t.month, t.day, t.hour, t.minute, t.second);
+        }
+        else
+        {
+            msh_printf("Error: Failed to get time\r\n");
+        }
+    }
+    else if (state == NTP_SYNCING)
+    {
+        msh_printf("NTP is syncing, please wait...\r\n");
+    }
+    else if (state == NTP_INIT || state == NTP_RESOLVE)
+    {
+        msh_printf("NTP not synced yet, resolving server...\r\n");
+    }
+    else
+    {
+        msh_printf("NTP sync failed, time unavailable\r\n");
+    }
+}
+
+static void ota_start_callback(int argc, char *argv)
+{
+	ota_set_start();
+	DEBUG_PRINT("START OTA TASK....\r\n");
+}
+
 /**
  * 
  * @brief msh处理函数放在线程里调用
@@ -382,6 +435,59 @@ static void get_digital_info_callback(int argc, char *argv)
  */
 void msh_process(void)
 {
+#if MSH_USE_RTT
+	/* RTT 输入轮询 */
+	while (SEGGER_RTT_HasKey())
+	{
+		char c = (char)SEGGER_RTT_GetKey();
+		
+		/* 过滤转义序列（方向键等），避免 pyOCD 崩溃 */
+		if (msh_esc_state == 0 && c == 0x1B)
+		{
+			msh_esc_state = 1;
+			continue;
+		}
+		if (msh_esc_state == 1)
+		{
+			msh_esc_state = (c == '[') ? 2 : 0;
+			continue;
+		}
+		if (msh_esc_state == 2)
+		{
+			msh_esc_state = 0;
+			continue;
+		}
+		
+		if (c == '\r' || c == '\n')
+		{
+			if (msh_buf_idx > 0)
+			{
+				msh_buf[msh_buf_idx] = '\0';
+				msh_buf_idx = 0;
+				msh_recv_flag = 1;
+			}
+			else
+			{
+				/* 空行回车：显示新提示符 */
+				msh_printf("msh> ");
+			}
+		}
+		else if (c == '\b' || c == 0x7F)
+		{
+			if (msh_buf_idx > 0)
+			{
+				msh_buf_idx--;
+				msh_printf("\b \b");
+			}
+		}
+		else if (msh_buf_idx < MSH_CMD_MAX_LEN - 1)
+		{
+			msh_buf[msh_buf_idx++] = c;
+			/* 普通字符由 pyOCD 本地回显，固件不回显，避免双份 */
+		}
+	}
+#endif
+
 	if(msh_recv_flag == 0)
 	{
 		return;

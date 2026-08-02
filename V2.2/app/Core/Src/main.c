@@ -43,7 +43,8 @@
 #include "app_flashdb.h"
 #include "dns.h"
 #include "mqtt_interface.h"
-#include "app_can.h"
+#include "app_w5500_ntp.h"
+#include "debug_print.h"
 
 /* USER CODE END Includes */
 
@@ -83,8 +84,8 @@ int fputc(int ch, FILE *f)
   HAL_UART_Transmit(&huart1, (uint8_t*)&ch, 1, HAL_MAX_DELAY);
 	return ch;
 }
-uint8_t test = 0;
-uint32_t boot = 0;
+#define DEBUG_ENABLE    1
+#define DEBUG_LOG "[ MAIN ]"
 /* USER CODE END 0 */
 
 /**
@@ -95,8 +96,7 @@ int main(void)
 {
 
   /* USER CODE BEGIN 1 */
-  __enable_irq();
-
+  
   /* USER CODE END 1 */
 
   /* MCU Configuration--------------------------------------------------------*/
@@ -105,7 +105,6 @@ int main(void)
   HAL_Init();
 
   /* USER CODE BEGIN Init */
-  
   /* USER CODE END Init */
 
   /* Configure the system clock */
@@ -113,6 +112,8 @@ int main(void)
 
   /* USER CODE BEGIN SysInit */
 
+  /* 时钟配置完成后才开启中断，此时 SysTick 已正确配置 */
+  __enable_irq();
   /* USER CODE END SysInit */
 
   /* Initialize all configured peripherals */
@@ -129,7 +130,9 @@ int main(void)
   MX_TIM3_Init();
   MX_I2C1_Init();
   /* USER CODE BEGIN 2 */
+#ifndef MSH_USE_RTT
 	HAL_UARTEx_ReceiveToIdle_DMA(&huart1 , u1_rx , sizeof(u1_rx));
+#endif
 	HAL_UARTEx_ReceiveToIdle_DMA(&huart3 , u3_rx , sizeof(u3_rx));
 	HAL_TIM_Base_Start_IT(&htim3);
 	HAL_TIM_PWM_Start(&htim2 , TIM_CHANNEL_2);
@@ -144,6 +147,7 @@ int main(void)
   /* FlashDB initialization */
   app_flashdb_init();
   app_w5500_tcp_client_init(); //w5500 tcp client 参数初始化
+	DEBUG_PRINT("APP Init Finish , Version:%s\r\n" , VERSION);
 
   /* USER CODE END 2 */
 
@@ -214,9 +218,12 @@ void SystemClock_Config(void)
 /* USER CODE BEGIN 4 */
 void HAL_UARTEx_RxEventCallback(UART_HandleTypeDef *huart, uint16_t Size)
 {
+#if !MSH_USE_RTT
 	if(huart->Instance == USART1){
 		msh_rx_data(u1_rx , Size);
-	}else if(huart->Instance == USART3){
+	}else 
+#endif
+	if(huart->Instance == USART3){
 	
 	}
 }
@@ -228,6 +235,7 @@ void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim)
 		DHCP_time_handler();
 		DNS_time_handler();
     MilliTimer_Handler();
+		app_w5500_ntp_1s_callback();
 		// tcp_1s_callback();
     
 	}

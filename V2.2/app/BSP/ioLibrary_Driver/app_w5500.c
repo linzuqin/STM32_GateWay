@@ -2,7 +2,7 @@
 
 #define DEBUG_ENABLE    1
 #define DEBUG_LOG "[ W5500 ]"
-#define DEBUG_PRINT(fmt, ...) do {if (DEBUG_ENABLE) printf(DEBUG_LOG "[%s:%d] " fmt "\n", __FILE__, __LINE__, ##__VA_ARGS__);} while (0)
+#include "debug_print.h"
 
 network_report_info_t network_report_info;
 
@@ -24,12 +24,16 @@ static void network_phy_proc(void)
 		setSn_KPALVTR(TCP_SERVER_SOCKET, 30); // 30s keepalive
 		setSn_KPALVTR(MQTT_SOCKET, 30);
 		setSn_KPALVTR(DNS_SOCKET, 30);
+		setSn_KPALVTR(HTTP_SOCKET, 30);
+		setSn_KPALVTR(NTP_SOCKET, 30);
 
 		close(TCP_SOCKET);
 		close(UDP_SOCKET);
 		close(TCP_SERVER_SOCKET);
 		close(MQTT_SOCKET);
 		close(DNS_SOCKET);
+		close(HTTP_SOCKET);
+		close(NTP_SOCKET);
 
 	}
 	else
@@ -50,5 +54,8 @@ void network_proc(void)
 		network_tcp_server_proc(); // TCP服务器处理
 		network_udp_proc();        // UDP服务器处理
 		app_w5500_mqtt_proc();
+		app_w5500_http_proc();     // HTTP客户端处理
+		app_w5500_ntp_proc();      // NTP时间校准处理
+    ota_proc();                  //OTA业务状态机
 	}
 }

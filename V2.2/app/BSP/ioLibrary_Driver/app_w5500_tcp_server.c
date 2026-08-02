@@ -7,7 +7,7 @@
 
 #define DEBUG_ENABLE    1
 #define DEBUG_LOG "[ TCP-SERVER ]"
-#define DEBUG_PRINT(fmt, ...) do {if (DEBUG_ENABLE) printf(DEBUG_LOG "[%s:%d] " fmt "\n", __FILE__, __LINE__, ##__VA_ARGS__);} while (0)
+#include "debug_print.h"
 
 uint16_t tcp_server_send_interval = 10;//tcp server send interval ,s
 

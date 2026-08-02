@@ -1,5 +1,6 @@
 bootloader\bootloader.o: ..\BSP\bootloader\bootloader.c
 bootloader\bootloader.o: ..\BSP\bootloader\bootloader.h
+bootloader\bootloader.o: ..\..\app\BSP\HAL_FLASH\hal_flash.h
 bootloader\bootloader.o: E:\KEIL\CORE\ARM\ARM_Compiler_5.06u7\Bin\..\include\stdint.h
 bootloader\bootloader.o: ../Core/Inc/main.h
 bootloader\bootloader.o: ../Drivers/STM32F1xx_HAL_Driver/Inc/stm32f1xx_hal.h
@@ -26,4 +27,12 @@ bootloader\bootloader.o: ../Drivers/STM32F1xx_HAL_Driver/Inc/stm32f1xx_hal_corte
 bootloader\bootloader.o: ../Drivers/STM32F1xx_HAL_Driver/Inc/stm32f1xx_hal_flash.h
 bootloader\bootloader.o: ../Drivers/STM32F1xx_HAL_Driver/Inc/stm32f1xx_hal_flash_ex.h
 bootloader\bootloader.o: ../Drivers/STM32F1xx_HAL_Driver/Inc/stm32f1xx_hal_pwr.h
+bootloader\bootloader.o: ../Drivers/STM32F1xx_HAL_Driver/Inc/stm32f1xx_hal_spi.h
+bootloader\bootloader.o: ../Drivers/STM32F1xx_HAL_Driver/Inc/stm32f1xx_hal_uart.h
+bootloader\bootloader.o: ..\..\app\BSP\FlashDB\port\fal\inc\fal.h
+bootloader\bootloader.o: ..\..\app\BSP\FlashDB\port\fal\inc\fal_cfg.h
+bootloader\bootloader.o: ..\..\app\BSP\FlashDB\port\fal\inc\fal_def.h
+bootloader\bootloader.o: E:\KEIL\CORE\ARM\ARM_Compiler_5.06u7\Bin\..\include\stdio.h
+bootloader\bootloader.o: E:\KEIL\CORE\ARM\ARM_Compiler_5.06u7\Bin\..\include\inttypes.h
+bootloader\bootloader.o: ..\..\app\BSP\FlashDB\app_flashdb.h
 bootloader\bootloader.o: E:\KEIL\CORE\ARM\ARM_Compiler_5.06u7\Bin\..\include\string.h

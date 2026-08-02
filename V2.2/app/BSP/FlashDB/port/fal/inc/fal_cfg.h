@@ -15,6 +15,10 @@
 
 #define NOR_FLASH_DEV_NAME             "norflash0"
 
+#define KVDB_BLOCK_NAME	"fdb_kvdb1"	
+#define TVDB_BLOCK_NAME	"fdb_tsdb1"	
+#define DOWNLOAD_BLOCK_NAME	"download"	
+
 /* ===================== Flash device Configuration ========================= */
 extern struct fal_flash_dev nor_flash0;
 
@@ -31,9 +35,9 @@ extern struct fal_flash_dev nor_flash0;
 /* W25Q128: 16MB (0x000000 ~ 0xFFFFFF) */
 #define FAL_PART_TABLE                                                               \
 {                                                                                    \
-    {FAL_PART_MAGIC_WORD,  "fdb_kvdb1", NOR_FLASH_DEV_NAME,         0,       256*1024, 0}, \
-    {FAL_PART_MAGIC_WORD,  "fdb_tsdb1", NOR_FLASH_DEV_NAME,   256*1024,      256*1024, 0}, \
-    {FAL_PART_MAGIC_WORD,  "download",  NOR_FLASH_DEV_NAME,   512*1024,     2048*1024, 0}, \
+    {FAL_PART_MAGIC_WORD,  KVDB_BLOCK_NAME, NOR_FLASH_DEV_NAME,         0,       256*1024, 0}, \
+    {FAL_PART_MAGIC_WORD,  TVDB_BLOCK_NAME, NOR_FLASH_DEV_NAME,   256*1024,      256*1024, 0}, \
+    {FAL_PART_MAGIC_WORD,  DOWNLOAD_BLOCK_NAME,  NOR_FLASH_DEV_NAME,   512*1024,     448*1024, 0}, \
 }
 #endif /* FAL_PART_HAS_TABLE_CFG */
 

@@ -153,7 +153,7 @@ digital_err_t Set_digital(uint16_t ch , uint8_t state)
 digital_pin_state_t Read_digital_State(uint16_t ch)
 {
 	digital_info_t *dev = &digital_params[ch];;
-	digital_err_t ret = digital_OK;
+	digital_pin_state_t ret = DIGITAL_PIN_RESET;
 
 	if(dev->enable == 0)
 	{
@@ -188,7 +188,7 @@ digital_err_t Read_ALL_digital_State(void)
 
 	for(i = 0;i<digital_NUM;i++)
 	{
-		ret = Read_digital_State(i);
+		Read_digital_State(i);
 	}
 	return ret;
 }

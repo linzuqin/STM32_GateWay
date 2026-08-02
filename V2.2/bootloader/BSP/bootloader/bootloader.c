@@ -1,10 +1,18 @@
 #include "bootloader.h"
 #include "main.h"
+#include "fal.h"
+#include "app_flashdb.h"
 #include <string.h>
+#include "hal_flash.h"
 
 #define DEBUG_ENABLE    1
 #define DEBUG_LOG "[ BOOTLOADER ]"
 #define DEBUG_PRINT(fmt, ...) do {if (DEBUG_ENABLE) printf(DEBUG_LOG "[%s:%d] " fmt "\n", __FILE__, __LINE__, ##__VA_ARGS__);} while (0)
+
+/* ---- 升级缓冲区（从 W25Q 读取固件的中转 buffer）---- */
+static uint8_t chunk_buf[UPGRADE_CHUNK_SIZE];
+
+/* ============================== CRC32 ============================== */
 
 static uint32_t crc32_calc(uint8_t *data, uint32_t len)
 {
@@ -20,218 +28,201 @@ static uint32_t crc32_calc(uint8_t *data, uint32_t len)
     return ~crc;
 }
 
-//获取升级标志位函�? 需要自定义 1:需要升�? 0:不需要升�?
-static uint8_t get_upgrade_flag(void) 
-{
+/* ============================== 升级标志 ============================== */
 
-    return 0; // 临时返回0，需�?定义
+/**
+ * @brief 获取升级标志位
+ * @return 1: 需要升级  0: 不需要
+ * @note  从 FlashDB 中读取 key="upgrade_flag" 的值
+ */
+static uint8_t get_upgrade_flag(void)
+{
+    uint8_t flag = 0;
+    app_flashdb_get("upgrade_flag", &flag, sizeof(flag));
+    return flag;
 }
 
-//清除升级标志位函�? 需要自定义
-static void clear_upgrade_flag(void) 
+/**
+ * @brief 清除升级标志
+ * @note  将 FlashDB 中 key="upgrade_flag" 清零
+ */
+static void clear_upgrade_flag(void)
 {
-
+    uint8_t flag = 0;
+    app_flashdb_set("upgrade_flag", &flag, sizeof(flag));
 }
 
-//关闭全局�?�?函数
-static void disable_interrupts(void) 
-{
-    __disable_irq();
-}
 
-//开�?全局�?�?函数
-static void enable_interrupts(void) 
+/**
+ * @brief 从 W25Q download 分区搬运固件到片内 APP 区
+ * @note  APP_SIZE(240KB) < download 分区大小(2MB)，只复制前 APP_SIZE 字节
+ * @return 0: 成功  1: 失败
+ */
+static uint8_t upgrade_firmware(void)
 {
-    __enable_irq();
-}
-
-//设置msp栈顶指针函数
-static void set_msp(uint32_t addr) 
-{
-    __set_MSP(addr);
-}
-
-//读取flash函数 实现 0:成功 1:失败
-static uint8_t flash_read(uint32_t address, uint8_t *data, uint32_t size) 
-{
-    if (address < FLASH_BASE_ADDR || (address + size) > (FLASH_MAX_ADDR + 1) || address == 0 || size == 0)
+    const struct fal_partition *dl_part = fal_partition_find(DOWNLOAD_PART_NAME);
+    if (dl_part == NULL)
     {
+        DEBUG_PRINT("FAL partition '%s' not found", DOWNLOAD_PART_NAME);
         return 1;
     }
 
-    disable_interrupts();
+    DEBUG_PRINT("upgrade start: w25q '%s' -> internal flash 0x%08X, size=%dKB",
+                DOWNLOAD_PART_NAME, (unsigned int)APP_START_ADDRESS, APP_SIZE / 1024);
 
-    const volatile uint8_t *flash_src = (const volatile uint8_t *)address;//const�?为了保护指向地址的内容不�?�?�? volatile�?为了保证在�?�取的时候不�?编译器优�?
-    memcpy(data, (const void *)flash_src, size);
-   
-    enable_interrupts();
-    return 0; // 读取成功
-}
-
-//擦除flash函数 实现 0:成功 1:失败
-static uint8_t flash_erase(uint32_t address, uint32_t size) 
-{
-    //1.对操作地址大小进�?�校�?
-    if (address < FLASH_BASE_ADDR || (address + size) > (FLASH_MAX_ADDR + 1) || address == 0 || size == 0)
+    /* ---- 1. 擦除片内 APP 区 ---- */
+    DEBUG_PRINT("erasing APP area...");
+    if (flash_erase(APP_START_ADDRESS, APP_SIZE) != 0)
     {
+        DEBUG_PRINT("erase failed");
         return 1;
     }
 
-    //2.关闭�?�? 防�?�在执�?�flash操作的时候�??�?�?打断
-    disable_interrupts();
-
-    //3.执�?�flash操作
-    HAL_StatusTypeDef hal_status = HAL_OK;
-    uint32_t PageError = 0;
-    FLASH_EraseInitTypeDef EraseInitStruct = {0};
-
-    uint32_t offset = address - FLASH_BASE_ADDR;
-    uint32_t page_start_addr = FLASH_BASE_ADDR + ((offset / PAGE_SIZE) * PAGE_SIZE);
-    uint32_t page_end_addr = FLASH_BASE_ADDR + (((offset + size - 1) / PAGE_SIZE) * PAGE_SIZE);
-    uint32_t nb_pages = ((page_end_addr - page_start_addr) / PAGE_SIZE) + 1;
-
-    EraseInitStruct.TypeErase = FLASH_TYPEERASE_PAGES;
-    EraseInitStruct.PageAddress = page_start_addr;
-    EraseInitStruct.NbPages = nb_pages;
-
-    HAL_FLASH_Unlock();
-    __HAL_FLASH_CLEAR_FLAG(FLASH_FLAG_EOP | FLASH_FLAG_PGERR | FLASH_FLAG_WRPERR | FLASH_FLAG_BSY);
-
-    hal_status = HAL_FLASHEx_Erase(&EraseInitStruct, &PageError);
-    if (hal_status != HAL_OK)
+    /* ---- 2. 分块从 W25Q 读取并写入片内 Flash ---- */
+    DEBUG_PRINT("writing firmware...");
+    for (uint32_t offset = 0; offset < APP_SIZE; offset += UPGRADE_CHUNK_SIZE)
     {
-        HAL_FLASH_Lock();
-        enable_interrupts();
-        return 1;
-    }
+        uint32_t chunk = ((APP_SIZE - offset) > UPGRADE_CHUNK_SIZE)
+                       ? UPGRADE_CHUNK_SIZE
+                       : (APP_SIZE - offset);
 
-    HAL_FLASH_Lock();
-
-    //4.开�?�?�?
-    enable_interrupts();
-    return 0; // 成功    
-}
-
-//写入flash函数 实现 0:成功 1:失败
-static uint8_t flash_write(uint32_t address, uint8_t *data, uint32_t size) 
-{
-    //1.对操作地址大小进�?�校�?
-    if (address < FLASH_BASE_ADDR || (address + size) > (FLASH_MAX_ADDR + 1) || address == 0 || size == 0)
-    {
-        return 1;
-    }
-
-    //2.对操作地址的有效性进行校�?
-    if ((address % 2 != 0) || (size % 2 != 0) || data == NULL)
-    {
-        return 1;
-    }
-
-    //3.关闭�?�? 防�?�在执�?�flash操作的时候�??�?�?打断
-    disable_interrupts();
-
-    //4.执�?�flash操作
-    HAL_StatusTypeDef hal_status = HAL_OK;
-
-    uint32_t write_addr = address;
-    uint16_t *p_halfword = (uint16_t *)data;
-    uint32_t halfword_count = size / 2;
-
-    HAL_FLASH_Unlock();
-    __HAL_FLASH_CLEAR_FLAG(FLASH_FLAG_EOP | FLASH_FLAG_PGERR | FLASH_FLAG_WRPERR);
-
-    for (uint32_t i = 0; i < halfword_count; i++)
-    {
-        hal_status = HAL_FLASH_Program(FLASH_TYPEPROGRAM_HALFWORD, write_addr, p_halfword[i]);
-
-        if (hal_status != HAL_OK)
+        /* 从 W25Q download 分区读取 */
+        if (fal_partition_read(dl_part, offset, chunk_buf, chunk) < 0)
         {
-            HAL_FLASH_Lock();
-            enable_interrupts();
+            DEBUG_PRINT("read W25Q failed at offset=%lu", offset);
             return 1;
         }
 
-        write_addr += 2;
+        /* 写入片内 Flash */
+        if (flash_write(APP_START_ADDRESS + offset, chunk_buf, chunk) != 0)
+        {
+            DEBUG_PRINT("write internal flash failed at offset=%lu", offset);
+            return 1;
+        }
     }
 
-    HAL_FLASH_Lock();
+    /* ---- 3. 回读校验：对比 W25Q 与片内 Flash 前 256 字节 ---- */
+    {
+        uint8_t verify_w25q[256];
+        uint8_t verify_flash[256];
 
-    //6.开�?�?�?
-    enable_interrupts();
+        if (fal_partition_read(dl_part, 0, verify_w25q, sizeof(verify_w25q)) < 0)
+        {
+            DEBUG_PRINT("verify: read W25Q failed");
+            return 1;
+        }
+        if (flash_read(APP_START_ADDRESS, verify_flash, sizeof(verify_flash)) != 0)
+        {
+            DEBUG_PRINT("verify: read internal flash failed");
+            return 1;
+        }
+        if (memcmp(verify_w25q, verify_flash, sizeof(verify_w25q)) != 0)
+        {
+            DEBUG_PRINT("verify: MISMATCH! W25Q != internal flash");
+            for (int i = 0; i < 256; i++)
+            {
+                if (verify_w25q[i] != verify_flash[i])
+                {
+                    DEBUG_PRINT("  offset 0x%02X: W25Q=0x%02X, Flash=0x%02X",
+                                i, verify_w25q[i], verify_flash[i]);
+                    break;
+                }
+            }
+            return 1;
+        }
+        DEBUG_PRINT("verify: first 256 bytes OK");
+    }
+
     return 0;
 }
 
+/* ============================== 跳转 APP ============================== */
+
 static void bootloader_jump_to_app(void)
 {
-    //1. 获取app区的程序入口
-    uint32_t app_address = *(volatile uint32_t *)(APP_START_ADDRESS + 4); //这里�?4�?因为根据stm32的内存划�? �?一�?地址存储的是msp栈顶指针,下一�?地址才是复位�?�?向量
+    /* 1. 校验 APP 区是否有有效程序 */
+    uint32_t msp_address = *(volatile uint32_t *)APP_START_ADDRESS;
+    uint32_t app_address = *(volatile uint32_t *)(APP_START_ADDRESS + 4);
 
-    //校验指向复位向量地址的指针是否在app的范围内
-    if(app_address < APP_START_ADDRESS || app_address >= (APP_START_ADDRESS + APP_SIZE)) 
+    DEBUG_PRINT("MSP=0x%08lX, ResetVector=0x%08lX", msp_address, app_address);
+
+    if (msp_address < RAM_START_ADDR || msp_address >= (RAM_START_ADDR + RAM_SIZE))
     {
+        DEBUG_PRINT("invalid MSP: 0x%08lX, stay in bootloader", msp_address);
+        return;
+    }
+    if (app_address < APP_START_ADDRESS || app_address >= (APP_START_ADDRESS + APP_SIZE))
+    {
+        DEBUG_PRINT("invalid reset vector: 0x%08lX, stay in bootloader", app_address);
         return;
     }
 
-    //2. 设置msp栈顶指针
-    uint32_t msp_address = *(volatile uint32_t *)APP_START_ADDRESS; //获取msp栈顶指针的�?
+    /* 2. 关闭 bootloader 使用的外设，避免干扰 APP 启动 */
+    /* 停止 TIM1（bootloader 的 timebase），否则 APP 开中断后会触发 Default_Handler 死循环 */
+    TIM1->CR1  &= ~TIM_CR1_CEN;
+    TIM1->DIER &= ~TIM_DIER_UIE;
+    NVIC_DisableIRQ(TIM1_UP_IRQn);
+		DEBUG_PRINT("DISABLE TIM1\r\n");
+		
+    /* 复位 SysTick 到安全状态 */
+    SysTick->CTRL  = 0;
+    SysTick->LOAD  = 0;
+    SysTick->VAL   = 0;
+		DEBUG_PRINT("DISABLE systick\r\n");
 
-    //校验msp指针所对应的值是否在RAM的范围内
-    if (msp_address < RAM_START_ADDR || msp_address >= RAM_START_ADDR + RAM_SIZE)
-    {
-        return;
-    }
+    /* 清除所有挂起的中断 */
+    NVIC_ClearPendingIRQ(TIM1_UP_IRQn);
+    NVIC_ClearPendingIRQ(SysTick_IRQn);
+		DEBUG_PRINT("DISABLE NVIC\r\n");
 
-    //3. 设置栈顶指针
-    disable_interrupts(); //禁用所有中�?
-    set_msp(msp_address); //设置栈顶指针
+    /* 3. 关全局中断，设置 MSP，跳转 */
+    __disable_irq();
+		DEBUG_PRINT("DISABLE IRQ\r\n");
 
-    //4. 跳转到APP入口地址
-//    DEBUG_PRINT("jump to app , address:%x\r\n" , app_address);
-		SCB->VTOR = FLASH_BASE | 0x00008000U;
+    __set_MSP(msp_address);
+		DEBUG_PRINT("SET MSP\r\n");
 
+    SCB->VTOR = APP_START_ADDRESS;
+		DEBUG_PRINT("SET VTOR\r\n");
+
+    DEBUG_PRINT("jumping to 0x%08lX...", app_address);
     void (*app_entry)(void) = (void (*)(void))app_address;
     app_entry();
+
+    /* 理论上不会到这里 */
+    while (1) {}
 }
+
+/* ============================== 入口 ============================== */
 
 void bootloader_poll(void)
 {
-    if (get_upgrade_flag() == 1) 
+    /* 检查是否需要升级 */
+    if (get_upgrade_flag() == 1)
     {
-        disable_interrupts();
+        DEBUG_PRINT("upgrade flag detected, start firmware upgrade");
 
-        //1. 擦除APP�?
-        if(flash_erase(APP_START_ADDRESS, APP_SIZE) != 0)
+        if (upgrade_firmware() == 0)
         {
-            enable_interrupts();
-            return; 
+            /* 升级成功，清除标志 */
+            clear_upgrade_flag();
+            DEBUG_PRINT("upgrade done, clear flag, jumping to app");
         }
-
-        //2. 从download区�?�制数据到APP�?
-        if(flash_write(APP_START_ADDRESS, (uint8_t *)DOWNLOAD_START_ADDRESS, APP_SIZE) != 0) //写入失败
+        else
         {
-            enable_interrupts();
-            return; 
+            /* 升级失败，不清除标志，尝试跳转（可能旧固件仍可用） */
+            DEBUG_PRINT("upgrade failed, try to jump to existing app");
         }
-
-        //3. crc32校验
-        uint8_t *download_data = (uint8_t *)DOWNLOAD_START_ADDRESS;
-        uint32_t download_crc = crc32_calc(download_data, APP_SIZE);
-        uint32_t app_crc = crc32_calc((uint8_t *)APP_START_ADDRESS, APP_SIZE);
-        if (download_crc != app_crc)//校验失败
-        {
-            enable_interrupts();
-            return; 
-        }
-
-        //3. 清除升级标志�?
-        clear_upgrade_flag();
-
-        //4. 恢�?�中�?
-				  SysTick->CTRL  = 0;       // 关闭SysTick定时器、关闭中断
-					SysTick->LOAD  = 0;       // 清空重装载值
-					SysTick->VAL   = 0;       // 清空当前计数器
-        enable_interrupts();
     }
-    //5. 执�?�跳�?
+
+    /* 跳转到 APP */
     bootloader_jump_to_app();
+
+    /* 跳转失败，停留在 bootloader */
+    DEBUG_PRINT("jump failed, stay in bootloader");
+    while (1)
+    {
+        /* 闪烁 LED 或打印日志表示跳转失败 */
+        HAL_Delay(500);
+    }
 }

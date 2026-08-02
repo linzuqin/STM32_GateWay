@@ -9,28 +9,10 @@
 
 #define DEBUG_ENABLE 1
 #define DEBUG_LOG "[ MQTT-Client ]"
-#define DEBUG_PRINT(fmt, ...) do{if (DEBUG_ENABLE)printf(DEBUG_LOG "[%s:%d] " fmt "\n", __FILE__, __LINE__, ##__VA_ARGS__);} while (0)
+#include "debug_print.h"
 
-/*数组大小*/
-#define BUFFER_SIZE 2048
 
-/*心跳包间隔*/
-#define KEEPALIVE 60
 
-/*MQTT用户名*/
-#define MQTT_USERNAME "2Its5wq8a3"
-
-/*MQTT密码*/
-#define MQTT_PASSWORD "version=2018-10-31&res=products%2F2Its5wq8a3%2Fdevices%2Flot_device&et=1988355119&method=md5&sign=zyATn1UFf7fvJEEjorA7Ww%3D%3D"
-
-/*MQTT客户端*/
-#define MQTT_CLIENTID "lot_device"
-
-/*MQTT发布主题*/
-#define MQTT_PUB_TOPIC_1 "$sys/"MQTT_USERNAME"/"MQTT_CLIENTID"/thing/property/post"
-
-/*MQTT订阅主题*/
-#define MQTT_SUB_TOPIC_1 "$sys/"MQTT_USERNAME"/"MQTT_CLIENTID"/thing/property/set"
 
 /*MQTT服务器域名*/
 char mqtt_server_domain[64] = "mqtts.heclouds.com";
@@ -60,10 +42,21 @@ struct opts_struct
     int showtopics;
 } opts = {.clientid = MQTT_CLIENTID, .username = MQTT_USERNAME, .password = MQTT_PASSWORD, .nodelimiter = 0, .delimiter = (char *)"\n", .qos = QOS0, .showtopics = 0};
 
+struct mqtt_message_stuct
+{
+    char id[8];
+    char ack_message[64];
+    uint16_t ack_code;
+    char version[8];
+    uint8_t need_ack;
+}mqtt_message;
+
 static Network n;
 static MQTTClient c;
 static MQTTPacket_connectData data = MQTTPacket_connectData_initializer;
 static MQTT_State_t MQTT_State = MQTT_PARAMS_INIT;
+
+uint8_t update_test = 0;
 
 /**
  *
@@ -101,6 +94,92 @@ int app_w5500_mqtt_publish(const char *topic, char *data, uint16_t size)
 }
 
 /**
+ * 
+ * @brief mqtt应答函数 根据mqtt_message中的参数向应答主题MQTT_ACK_TOPIC_1发送应答
+ * @return int 发送结果
+ * @author LinZuQin (1904499306@qq.com)
+ * @date 2026-08-01 18:35:17
+ * @copyright Copyright (c) 2026
+ */
+static int app_w5500_mqtt_ack(void)
+{
+    int ret = -1;
+    char *topic = MQTT_ACK_TOPIC_1;
+    if(mqtt_message.need_ack == 1)
+    {
+        cJSON *root = cJSON_CreateObject();
+        cJSON_AddStringToObject(root , "id" , mqtt_message.id);
+        cJSON_AddStringToObject(root , "msg" , mqtt_message.ack_message);
+        cJSON_AddNumberToObject(root , "code" , mqtt_message.ack_code);
+
+        char *str = cJSON_PrintUnformatted(root);
+        if(str != NULL)
+        {
+            ret = app_w5500_mqtt_publish(topic , str , strlen(topic));
+            if(ret == SUCCESSS)
+            {
+                mqtt_message.need_ack = 0;
+                memset(mqtt_message.id , 0 , sizeof(mqtt_message.id));
+                memset(mqtt_message.ack_message , 0 , sizeof(mqtt_message.ack_message));
+                mqtt_message.ack_code = 0;
+                DEBUG_PRINT("mqtt publish success , topic:%s payload:%s\r\n" , topic , str);
+            }
+            else
+            {
+                DEBUG_PRINT("mqtt publish fail , ret:%d\r\n" , ret);
+            }
+        }
+        else
+        {
+            DEBUG_PRINT("CJSON malloc fail\r\n");
+        }
+
+    }
+    return ret;
+}
+
+/**
+ * 
+ * @brief mqtt解析函数 需要根据实际自定义
+ * @param payload 消息内容
+ * @author LinZuQin (1904499306@qq.com)
+ * @date 2026-08-01 18:36:01
+ * @copyright Copyright (c) 2026
+ */
+static void app_w5500_mqtt_parse(char *payload)
+{
+    cJSON *root = cJSON_Parse(payload);
+
+    if(root != NULL)
+    {
+        cJSON *id_js = cJSON_GetObjectItem(root , "id");
+        if(id_js!= NULL)
+        {
+            memcpy(mqtt_message.id , id_js->valuestring , strlen(id_js->valuestring));
+        }
+
+        cJSON *version_js = cJSON_GetObjectItem(root , "version");
+        if(version_js!= NULL)
+        {
+            memcpy(mqtt_message.version , version_js->valuestring , strlen(version_js->valuestring));
+        }
+
+        cJSON *update_js = cJSON_GetObjectItem(root , "update");
+        if(update_js != NULL)
+        {
+            update_test = update_js->valueint;
+            DEBUG_PRINT("parse update , value:%d\r\n" , update_js->valueint);
+        }
+
+        cJSON_Delete(root);
+        sprintf(mqtt_message.ack_message , "succ");
+        mqtt_message.ack_code = 200;
+        mqtt_message.need_ack = 1;
+
+    }
+}
+
+/**
  *
  * @param md
  * @brief 收到数据的回调函数
@@ -110,24 +189,14 @@ int app_w5500_mqtt_publish(const char *topic, char *data, uint16_t size)
  */
 static void messageArrived(MessageData *md)
 {
-    unsigned char testbuffer[100];
     MQTTMessage *message = md->message;
-
-    if (opts.showtopics)
+    MQTTString *topic = md->topicName;
+    DEBUG_PRINT("receive mqtt message,topic:%s , payload:%s\r\n" , topic->cstring , (char *)message->payload);
+    if(strcmp(topic->cstring , MQTT_SUB_TOPIC_1) == 0)
     {
-        memcpy(testbuffer, (char *)message->payload, (int)message->payloadlen);
-        *(testbuffer + (int)message->payloadlen + 1) = '\0';
-        DEBUG_PRINT("%s\r\n", testbuffer);
+        app_w5500_mqtt_parse((char *)message->payload);
     }
-
-    if (opts.nodelimiter)
-    {
-        DEBUG_PRINT("%.*s", (int)message->payloadlen, (char *)message->payload);
-    }
-    else
-    {
-        DEBUG_PRINT("%.*s%s", (int)message->payloadlen, (char *)message->payload, opts.delimiter);
-    }
+    
 }
 
 /**
@@ -296,10 +365,10 @@ void app_w5500_mqtt_proc(void)
         app_w5500_mqtt_keep();
         if (c.isconnected == 0)
         {
-            app_w5500_mqtt_reset();
-            DEBUG_PRINT("DISCONNECT,reset MQTT state\r\n");
+					app_w5500_mqtt_reset();
+					DEBUG_PRINT("DISCONNECT,reset MQTT state\r\n");
+					app_w5500_mqtt_ack();
         }
-
         break;
     }
 

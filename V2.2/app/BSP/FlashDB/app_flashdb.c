@@ -6,7 +6,7 @@
 
 #define DEBUG_ENABLE    1
 #define DEBUG_LOG "[ FlashDB ]"
-#define DEBUG_PRINT(fmt, ...) do {if (DEBUG_ENABLE) printf(DEBUG_LOG "[%s:%d] " fmt "\n", __FILE__, __LINE__, ##__VA_ARGS__);} while (0)
+#include "debug_print.h"
 
 /* KVDB database object (internal, caller doesn't need to know) */
 static struct fdb_kvdb kvdb_obj;
@@ -69,4 +69,9 @@ int app_flashdb_get(const char *key, void *value, size_t len)
         return 0; /* key not found */
 
     return (int)read_len;
+}
+
+uint32_t Get_Boot(void)
+{
+	return boot;
 }

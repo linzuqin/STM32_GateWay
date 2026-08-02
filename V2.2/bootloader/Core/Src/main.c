@@ -18,14 +18,18 @@
 /* USER CODE END Header */
 /* Includes ------------------------------------------------------------------*/
 #include "main.h"
+#include "spi.h"
+#include "usart.h"
 #include "gpio.h"
 
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
 #include "bootloader.h"
-//#include "stdio.h"
-//#include "stdlib.h"
-
+#include "stdio.h"
+#include "stdlib.h"
+#include "app_w25qxx.h"
+#include "app_flashdb.h"
+#include "debug_print.h"
 /* USER CODE END Includes */
 
 /* Private typedef -----------------------------------------------------------*/
@@ -57,11 +61,13 @@ void SystemClock_Config(void);
 
 /* Private user code ---------------------------------------------------------*/
 /* USER CODE BEGIN 0 */
-//int fputc(int ch, FILE *f)
-//{
-////  HAL_UART_Transmit(&huart1, (uint8_t*)&ch, 1, HAL_MAX_DELAY);
-//	return ch;
-//}
+int fputc(int ch, FILE *f)
+{
+  HAL_UART_Transmit(&huart1, (uint8_t*)&ch, 1, HAL_MAX_DELAY);
+	return ch;
+}
+#define DEBUG_ENABLE    1
+#define DEBUG_LOG "[ W5500 ]"
 /* USER CODE END 0 */
 
 /**
@@ -93,7 +99,11 @@ int main(void)
 
   /* Initialize all configured peripherals */
   MX_GPIO_Init();
+  MX_SPI2_Init();
+  MX_USART1_UART_Init();
   /* USER CODE BEGIN 2 */
+	app_flashdb_init();
+	DEBUG_PRINT("Bootloader Init Finish\r\n");
 	bootloader_poll();
   /* USER CODE END 2 */
 

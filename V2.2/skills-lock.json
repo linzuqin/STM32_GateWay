@@ -1,0 +1,11 @@
+{
+  "version": 1,
+  "skills": {
+    "stm32-debug": {
+      "source": "xzhaosudo/stm32debug-skill",
+      "sourceType": "github",
+      "skillPath": "SKILL.md",
+      "computedHash": "3ff393dca0070389b57edecfd690b6c90e42396d47fc8352641cb26d7f8ea7a1"
+    }
+  }
+}

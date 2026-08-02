@@ -1,0 +1,9 @@
+.\v2.0\loopback.o: ..\BSP\ioLibrary_Driver\Application\loopback\loopback.c
+.\v2.0\loopback.o: E:\KEIL\CORE\ARM\ARM_Compiler_5.06u7\Bin\..\include\stdio.h
+.\v2.0\loopback.o: E:\KEIL\CORE\ARM\ARM_Compiler_5.06u7\Bin\..\include\string.h
+.\v2.0\loopback.o: ..\BSP\ioLibrary_Driver\Application\loopback\loopback.h
+.\v2.0\loopback.o: E:\KEIL\CORE\ARM\ARM_Compiler_5.06u7\Bin\..\include\stdint.h
+.\v2.0\loopback.o: ../BSP/ioLibrary_Driver/Ethernet/socket.h
+.\v2.0\loopback.o: ../BSP/ioLibrary_Driver/Ethernet/wizchip_conf.h
+.\v2.0\loopback.o: ../BSP/ioLibrary_Driver/Ethernet/W5500/w5500.h
+.\v2.0\loopback.o: ../BSP/ioLibrary_Driver/Ethernet/wizchip_conf.h

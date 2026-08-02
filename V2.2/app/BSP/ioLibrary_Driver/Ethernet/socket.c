@@ -300,18 +300,31 @@ int8_t disconnect(uint8_t sn)
    CHECK_SOCKMODE(Sn_MR_TCP);
 	setSn_CR(sn,Sn_CR_DISCON);
 	/* wait to process the command... */
-	while(getSn_CR(sn));
+   if(getSn_CR(sn) != sn)
+   {
+      return SOCK_BUSY;
+   }
+	// while(getSn_CR(sn));
 	sock_is_sending &= ~(1<<sn);
    if(sock_io_mode & (1<<sn)) return SOCK_BUSY;
-	while(getSn_SR(sn) != SOCK_CLOSED)
-	{
-	   if(getSn_IR(sn) & Sn_IR_TIMEOUT)
-	   {
-	      close(sn);
-	      return SOCKERR_TIMEOUT;
-	   }
-	}
-	return SOCK_OK;
+   if(getSn_IR(sn) & Sn_IR_TIMEOUT)
+   {
+      close(sn);
+      return SOCKERR_TIMEOUT;
+   }
+	// while(getSn_SR(sn) != SOCK_CLOSED)
+	// {
+   //    if(getSn_IR(sn) & Sn_IR_TIMEOUT)
+   //    {
+   //       close(sn);
+   //       return SOCKERR_TIMEOUT;
+   //    }
+	// }
+   if(getSn_SR(sn) == SOCK_CLOSED)
+   {
+      return SOCK_OK;
+   }
+   return SOCK_OK;
 }
 
 int32_t send(uint8_t sn, uint8_t * buf, uint16_t len)

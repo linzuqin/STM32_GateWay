@@ -1,0 +1,15 @@
+bootloader\fdb_file.o: ..\..\app\BSP\FlashDB\src\fdb_file.c
+bootloader\fdb_file.o: E:\KEIL\CORE\ARM\ARM_Compiler_5.06u7\Bin\..\include\stdio.h
+bootloader\fdb_file.o: E:\KEIL\CORE\ARM\ARM_Compiler_5.06u7\Bin\..\include\string.h
+bootloader\fdb_file.o: ..\..\app\BSP\FlashDB\inc\flashdb.h
+bootloader\fdb_file.o: E:\KEIL\CORE\ARM\ARM_Compiler_5.06u7\Bin\..\include\stdint.h
+bootloader\fdb_file.o: E:\KEIL\CORE\ARM\ARM_Compiler_5.06u7\Bin\..\include\stddef.h
+bootloader\fdb_file.o: E:\KEIL\CORE\ARM\ARM_Compiler_5.06u7\Bin\..\include\stdbool.h
+bootloader\fdb_file.o: E:\KEIL\CORE\ARM\ARM_Compiler_5.06u7\Bin\..\include\time.h
+bootloader\fdb_file.o: ..\..\app\BSP\FlashDB\inc\fdb_cfg.h
+bootloader\fdb_file.o: ..\..\app\BSP\FlashDB\port\fal\inc\fal.h
+bootloader\fdb_file.o: ..\..\app\BSP\FlashDB\port\fal\inc\fal_cfg.h
+bootloader\fdb_file.o: ..\..\app\BSP\FlashDB\port\fal\inc\fal_def.h
+bootloader\fdb_file.o: E:\KEIL\CORE\ARM\ARM_Compiler_5.06u7\Bin\..\include\inttypes.h
+bootloader\fdb_file.o: ..\..\app\BSP\FlashDB\inc\fdb_def.h
+bootloader\fdb_file.o: ..\..\app\BSP\FlashDB\inc\fdb_low_lvl.h

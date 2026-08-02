@@ -28,4 +28,6 @@ int app_flashdb_set(const char *key, const void *value, size_t len);
  */
 int app_flashdb_get(const char *key, void *value, size_t len);
 
+uint32_t Get_Boot(void);
+
 #endif /* _APP_FLASHDB_H_ */

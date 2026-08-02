@@ -48,14 +48,14 @@
             <NotGenerated>0</NotGenerated>
             <InvalidFlash>1</InvalidFlash>
           </TargetStatus>
-          <OutputDirectory>v2.0\</OutputDirectory>
+          <OutputDirectory>.\v2.0\</OutputDirectory>
           <OutputName>v2_0</OutputName>
           <CreateExecutable>1</CreateExecutable>
           <CreateLib>0</CreateLib>
           <CreateHexFile>1</CreateHexFile>
           <DebugInformation>1</DebugInformation>
           <BrowseInformation>1</BrowseInformation>
-          <ListingPath></ListingPath>
+          <ListingPath>.\v2.0\</ListingPath>
           <HexFormatSelection>1</HexFormatSelection>
           <Merge32K>0</Merge32K>
           <CreateBatchFile>0</CreateBatchFile>
@@ -80,9 +80,9 @@
             <nStopB2X>0</nStopB2X>
           </BeforeMake>
           <AfterMake>
-            <RunUserProg1>0</RunUserProg1>
+            <RunUserProg1>1</RunUserProg1>
             <RunUserProg2>1</RunUserProg2>
-            <UserProg1Name></UserProg1Name>
+            <UserProg1Name>E:\KEIL\CORE\ARM\ARM_Compiler_5.06u7\bin\fromelf.exe --bin --output ./v2.0/v2_0.bin ./v2.0/v2_0.axf</UserProg1Name>
             <UserProg2Name></UserProg2Name>
             <UserProg1Dos16Mode>0</UserProg1Dos16Mode>
             <UserProg2Dos16Mode>0</UserProg2Dos16Mode>
@@ -138,7 +138,7 @@
           </Flash1>
           <bUseTDR>1</bUseTDR>
           <Flash2>BIN\UL2V8M.DLL</Flash2>
-          <Flash3></Flash3>
+          <Flash3>"" ()</Flash3>
           <Flash4></Flash4>
           <pFcarmOut></pFcarmOut>
           <pFcarmGrp></pFcarmGrp>
@@ -276,8 +276,8 @@
               </OCR_RVCT3>
               <OCR_RVCT4>
                 <Type>1</Type>
-                <StartAddress>0x8008000</StartAddress>
-                <Size>0x3c000</Size>
+                <StartAddress>0x8010000</StartAddress>
+                <Size>0x70000</Size>
               </OCR_RVCT4>
               <OCR_RVCT5>
                 <Type>1</Type>
@@ -338,9 +338,9 @@
             <v6Rtti>0</v6Rtti>
             <VariousControls>
               <MiscControls>--no-multibyte-chars</MiscControls>
-              <Define>USE_HAL_DRIVER,STM32F103xE,MQTTCLIENT_PLATFORM_HEADER=platform.h,USER_VECT_TAB_ADDRESS</Define>
+              <Define>USE_HAL_DRIVER,STM32F103xE,MQTTCLIENT_PLATFORM_HEADER=platform.h</Define>
               <Undefine></Undefine>
-              <IncludePath>../Core/Inc;../Drivers/STM32F1xx_HAL_Driver/Inc;../Drivers/STM32F1xx_HAL_Driver/Inc/Legacy;../Drivers/CMSIS/Device/ST/STM32F1xx/Include;../Drivers/CMSIS/Include;../BSP/digital;../BSP/extern_flash;../BSP/HAL_FLASH;../BSP/ioLibrary_Driver/Application/loopback;../BSP/ioLibrary_Driver/Ethernet;../BSP/ioLibrary_Driver/Ethernet/W5500;../BSP/ioLibrary_Driver/Internet/DHCP;../BSP/ioLibrary_Driver;../BSP/lfs;../BSP/msh;../BSP/env;../BSP/cJSON;../BSP/tinycrypt-latest/include;../BSP/CRC/crc;../BSP/STTS22HTR;../BSP/Filter_method;../BSP/ioLibrary_Driver/Internet/MQTT;../BSP/ioLibrary_Driver/Internet/MQTT/MQTTPacket/src;../BSP/FlashDB/inc;../BSP/sfud/inc;../BSP/FlashDB/port/fal/inc;../BSP/FlashDB/port;../BSP/FlashDB;../BSP/ioLibrary_Driver/Internet/DNS;../BSP/CAN</IncludePath>
+              <IncludePath>../Core/Inc;../Drivers/STM32F1xx_HAL_Driver/Inc;../Drivers/STM32F1xx_HAL_Driver/Inc/Legacy;../Drivers/CMSIS/Device/ST/STM32F1xx/Include;../Drivers/CMSIS/Include;../BSP/digital;../BSP/extern_flash;../BSP/HAL_FLASH;../BSP/ioLibrary_Driver/Application/loopback;../BSP/ioLibrary_Driver/Ethernet;../BSP/ioLibrary_Driver/Ethernet/W5500;../BSP/ioLibrary_Driver/Internet/DHCP;../BSP/ioLibrary_Driver;../BSP/lfs;../BSP/msh;../BSP/env;../BSP/cJSON;../BSP/tinycrypt-latest/include;../BSP/CRC/crc;../BSP/STTS22HTR;../BSP/Filter_method;../BSP/ioLibrary_Driver/Internet/MQTT;../BSP/ioLibrary_Driver/Internet/MQTT/MQTTPacket/src;../BSP/FlashDB/inc;../BSP/sfud/inc;../BSP/FlashDB/port/fal/inc;../BSP/FlashDB/port;../BSP/FlashDB;../BSP/ioLibrary_Driver/Internet/DNS;../BSP/ioLibrary_Driver/Internet/SNTP;../BSP/RTT;../BSP/OTA</IncludePath>
             </VariousControls>
           </Cads>
           <Aads>
@@ -926,6 +926,36 @@
               <FileType>5</FileType>
               <FilePath>..\BSP\ioLibrary_Driver\Internet\DNS\dns.h</FilePath>
             </File>
+            <File>
+              <FileName>app_w5500_ntp.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>..\BSP\ioLibrary_Driver\app_w5500_ntp.c</FilePath>
+            </File>
+            <File>
+              <FileName>app_w5500_ntp.h</FileName>
+              <FileType>5</FileType>
+              <FilePath>..\BSP\ioLibrary_Driver\app_w5500_ntp.h</FilePath>
+            </File>
+            <File>
+              <FileName>app_w5500_http.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>..\BSP\ioLibrary_Driver\app_w5500_http.c</FilePath>
+            </File>
+            <File>
+              <FileName>app_w5500_http.h</FileName>
+              <FileType>5</FileType>
+              <FilePath>..\BSP\ioLibrary_Driver\app_w5500_http.h</FilePath>
+            </File>
+            <File>
+              <FileName>sntp.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>..\BSP\ioLibrary_Driver\Internet\SNTP\sntp.c</FilePath>
+            </File>
+            <File>
+              <FileName>sntp.h</FileName>
+              <FileType>5</FileType>
+              <FilePath>..\BSP\ioLibrary_Driver\Internet\SNTP\sntp.h</FilePath>
+            </File>
           </Files>
         </Group>
         <Group>
@@ -1074,6 +1104,16 @@
               <FileName>temp.h</FileName>
               <FileType>5</FileType>
               <FilePath>..\BSP\env\temp.h</FilePath>
+            </File>
+            <File>
+              <FileName>STTS22HTR.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>..\BSP\STTS22HTR\STTS22HTR.c</FilePath>
+            </File>
+            <File>
+              <FileName>STTS22HTR.h</FileName>
+              <FileType>5</FileType>
+              <FilePath>..\BSP\STTS22HTR\STTS22HTR.h</FilePath>
             </File>
           </Files>
         </Group>
@@ -1272,21 +1312,6 @@
           </Files>
         </Group>
         <Group>
-          <GroupName>STTS22HTR</GroupName>
-          <Files>
-            <File>
-              <FileName>STTS22HTR.c</FileName>
-              <FileType>1</FileType>
-              <FilePath>..\BSP\STTS22HTR\STTS22HTR.c</FilePath>
-            </File>
-            <File>
-              <FileName>STTS22HTR.h</FileName>
-              <FileType>5</FileType>
-              <FilePath>..\BSP\STTS22HTR\STTS22HTR.h</FilePath>
-            </File>
-          </Files>
-        </Group>
-        <Group>
           <GroupName>Filter</GroupName>
           <Files>
             <File>
@@ -1448,6 +1473,56 @@
               <FileName>app_flashdb.h</FileName>
               <FileType>5</FileType>
               <FilePath>..\BSP\FlashDB\app_flashdb.h</FilePath>
+            </File>
+          </Files>
+        </Group>
+        <Group>
+          <GroupName>RTT</GroupName>
+          <Files>
+            <File>
+              <FileName>SEGGER_RTT.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>..\BSP\RTT\SEGGER_RTT.c</FilePath>
+            </File>
+            <File>
+              <FileName>SEGGER_RTT_Conf.h</FileName>
+              <FileType>5</FileType>
+              <FilePath>..\BSP\RTT\SEGGER_RTT_Conf.h</FilePath>
+            </File>
+            <File>
+              <FileName>SEGGER_RTT.h</FileName>
+              <FileType>5</FileType>
+              <FilePath>..\BSP\RTT\SEGGER_RTT.h</FilePath>
+            </File>
+            <File>
+              <FileName>log.h</FileName>
+              <FileType>5</FileType>
+              <FilePath>..\BSP\RTT\log.h</FilePath>
+            </File>
+            <File>
+              <FileName>SEGGER_RTT_printf.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>..\BSP\RTT\SEGGER_RTT_printf.c</FilePath>
+            </File>
+            <File>
+              <FileName>debug_print.h</FileName>
+              <FileType>5</FileType>
+              <FilePath>..\BSP\RTT\debug_print.h</FilePath>
+            </File>
+          </Files>
+        </Group>
+        <Group>
+          <GroupName>OTA</GroupName>
+          <Files>
+            <File>
+              <FileName>ota.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>..\BSP\OTA\ota.c</FilePath>
+            </File>
+            <File>
+              <FileName>ota.h</FileName>
+              <FileType>5</FileType>
+              <FilePath>..\BSP\OTA\ota.h</FilePath>
             </File>
           </Files>
         </Group>

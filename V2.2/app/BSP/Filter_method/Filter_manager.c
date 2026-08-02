@@ -8,7 +8,7 @@
  */
 #define DEBUG_ENABLE    0
 #define DEBUG_LOG "[ FILTER ]"
-#define DEBUG_PRINT(fmt, ...) do {if (DEBUG_ENABLE) printf(DEBUG_LOG "[%s:%d] " fmt "\n", __FILE__, __LINE__, ##__VA_ARGS__);} while (0)
+#include "debug_print.h"
 
 extern filter_func_type_t clipping_filter_func;
 extern filter_func_type_t median_filter_func;
