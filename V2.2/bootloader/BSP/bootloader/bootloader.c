@@ -9,6 +9,21 @@
 #define DEBUG_LOG "[ BOOTLOADER ]"
 #define DEBUG_PRINT(fmt, ...) do {if (DEBUG_ENABLE) printf(DEBUG_LOG "[%s:%d] " fmt "\n", __FILE__, __LINE__, ##__VA_ARGS__);} while (0)
 
+struct ota_info_t
+{
+    uint8_t ota_flag;               // 是否触发OTA检测任务
+    char path[128];                 // 固件HTTP下载地址
+    uint16_t download_page;         // 单次分片长度
+    unsigned long download_size;              // 已下载总字节
+    uint16_t download_count;        // 下载分片次数
+    uint8_t is_need_update;         // 版本是否需要更新标记
+    char *version;                  // 当前固件版本
+    char dest_version[32];          // 云端目标新版本
+    int tid;                        // OTA任务ID
+    int fw_size;                    // 固件总大小
+    char md5[64];                   // 固件MD5
+}ota_info;
+
 /* ---- 升级缓冲区（从 W25Q 读取固件的中转 buffer）---- */
 static uint8_t chunk_buf[UPGRADE_CHUNK_SIZE];
 
@@ -35,21 +50,19 @@ static uint32_t crc32_calc(uint8_t *data, uint32_t len)
  * @return 1: 需要升级  0: 不需要
  * @note  从 FlashDB 中读取 key="upgrade_flag" 的值
  */
-static uint8_t get_upgrade_flag(void)
+static int get_upgrade_flag(void)
 {
-    uint8_t flag = 0;
-    app_flashdb_get("upgrade_flag", &flag, sizeof(flag));
-    return flag;
+    return app_flashdb_get("ota_info", &ota_info, sizeof(ota_info));
 }
 
 /**
  * @brief 清除升级标志
  * @note  将 FlashDB 中 key="upgrade_flag" 清零
  */
-static void clear_upgrade_flag(void)
+static void clear_upgrade_flag(uint8_t flag)
 {
-    uint8_t flag = 0;
-    app_flashdb_set("upgrade_flag", &flag, sizeof(flag));
+		ota_info.is_need_update = flag;
+    app_flashdb_set("ota_info", &ota_info, sizeof(ota_info));
 }
 
 
@@ -198,20 +211,21 @@ static void bootloader_jump_to_app(void)
 void bootloader_poll(void)
 {
     /* 检查是否需要升级 */
-    if (get_upgrade_flag() == 1)
+		get_upgrade_flag();
+    if (ota_info.is_need_update == 2)
     {
         DEBUG_PRINT("upgrade flag detected, start firmware upgrade");
 
         if (upgrade_firmware() == 0)
         {
             /* 升级成功，清除标志 */
-            clear_upgrade_flag();
-            DEBUG_PRINT("upgrade done, clear flag, jumping to app");
+            clear_upgrade_flag(1);
+            DEBUG_PRINT("upgrade done, clear flag, jumping to app , ota info 2->1");
         }
         else
         {
-            /* 升级失败，不清除标志，尝试跳转（可能旧固件仍可用） */
-            DEBUG_PRINT("upgrade failed, try to jump to existing app");
+						clear_upgrade_flag(2);
+            DEBUG_PRINT("upgrade failed, try to jump to existing app, ota info 2->1");
         }
     }
 

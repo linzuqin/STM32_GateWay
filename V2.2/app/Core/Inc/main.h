@@ -81,7 +81,7 @@ void Error_Handler(void);
 #define IN1_GPIO_Port GPIOB
 
 /* USER CODE BEGIN Private defines */
-#define VERSION	"2.3"
+#define VERSION	"2.7"
 /* USER CODE END Private defines */
 
 #ifdef __cplusplus

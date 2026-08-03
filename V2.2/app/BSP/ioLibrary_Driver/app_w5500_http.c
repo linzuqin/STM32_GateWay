@@ -209,7 +209,7 @@ int app_w5500_http_post(const char *domain, uint16_t port, const char *path, con
  */
 int app_w5500_http_get_response(http_response_t *resp)
 {
-    if (HTTP_State == HTTP_DONE && resp != NULL)
+    if (HTTP_State == HTTP_IDLE && resp != NULL)
     {
         *resp = http_msg.http_response;
         return http_msg.http_response.body_len;
@@ -607,13 +607,14 @@ void app_w5500_http_proc(void)
     case HTTP_CLOSE:
     {
         close(HTTP_SOCKET);
-        HTTP_State = HTTP_DONE;
+        http_request_pending = 0;
+
+        HTTP_State = HTTP_IDLE;
         break;
     }
 
-    case HTTP_DONE:
+    case HTTP_IDLE:
 
-        http_request_pending = 0;
         break;
 
     case HTTP_ERROR:
@@ -622,7 +623,7 @@ void app_w5500_http_proc(void)
         break;
 
     default:
-        HTTP_State = HTTP_IDLE;
+        http_close_socket_reset();
         break;
     }
 }

@@ -23,12 +23,11 @@ struct ota_info_t
     unsigned long download_size;              // 已下载总字节
     uint16_t download_count;        // 下载分片次数
     uint8_t is_need_update;         // 版本是否需要更新标记
-    char *version;                  // 当前固件版本
     char dest_version[32];          // 云端目标新版本
     int tid;                        // OTA任务ID
     int fw_size;                    // 固件总大小
     char md5[64];                   // 固件MD5
-}ota_info = {.version = VERSION};
+}ota_info;
 
 static enum ota_state_t ota_state = OTA_INIT;
 static uint8_t ota_download_buf[OTA_BLOCK_LEN]; //存储HTTP返回的数据
@@ -69,7 +68,7 @@ static void ota_delay(uint32_t ms)
  * @date 2026-08-02 10:03:20
  * @copyright Copyright (c) 2026
  */
-static int ota_update_version(int step)
+static int ota_update_state(int step)
 {
     char path[128];
     char query[128];
@@ -81,21 +80,20 @@ static int ota_update_version(int step)
     snprintf(headers, sizeof(headers), "Authorization: %s\r\n", OTA_Authorization);
     snprintf(body, sizeof(body), "{\"step\":%d}", step);
 
-    if (app_w5500_http_post(OTA_CHECK_DOMAIN, 80, path, query,
-                            "application/json", (uint8_t *)body, strlen(body), headers) != 0)
+    if (app_w5500_http_post(OTA_CHECK_DOMAIN, 80, path, query,"application/json", (uint8_t *)body, strlen(body), headers) != 0)
     {
         DEBUG_PRINT("status report post fail\r\n");
         return -1;
     }
 
     /* 等待 HTTP 完成 */
-    while (app_w5500_http_get_state() != HTTP_DONE && app_w5500_http_get_state() != HTTP_IDLE)
+    while (app_w5500_http_get_state() != HTTP_IDLE)
     {
         app_w5500_http_proc();
         ota_delay(10);
     }
 
-    if (app_w5500_http_get_state() == HTTP_IDLE)
+    if (app_w5500_http_get_state() == HTTP_ERROR)
     {
         DEBUG_PRINT("status report timeout\r\n");
         return -1;
@@ -106,6 +104,55 @@ static int ota_update_version(int step)
     DEBUG_PRINT("status report step=%d, http_code=%d, resp=%s\r\n", step, resp.status_code, resp.body);
 
     return (resp.status_code == HTTP_SUCCESS_CODE) ? 0 : -1;
+}
+
+/**
+ * 
+ * @brief 上报版本号
+ * @return int 
+ * @author LinZuQin (1904499306@qq.com)
+ * @date 2026-08-03 23:14:14
+ * @copyright Copyright (c) 2026
+ */
+static int ota_update_version(void)
+{
+    char path[128];
+    char query[128];
+    char headers[128];
+    char body[128];
+
+    snprintf(path, sizeof(path), "/fuse-ota/%s/%s/version", MQTT_USERNAME, MQTT_CLIENTID);
+    snprintf(query, sizeof(query), "pro_id=%s&dev_name=%s", MQTT_USERNAME, MQTT_CLIENTID);
+    snprintf(headers, sizeof(headers), "Authorization: %s\r\n", OTA_Authorization);
+    snprintf(body, sizeof(body), "{\"f_version\":\"%s\",\"s_version\":\"%s\"}", VERSION , VERSION);
+
+    if (app_w5500_http_post(OTA_CHECK_DOMAIN, 80, path, query,"application/json", (uint8_t *)body, strlen(body), headers) != 0)
+    {
+        DEBUG_PRINT("status report post fail\r\n");
+        return -1;
+    }
+    /* 等待 HTTP 完成 */
+    while (app_w5500_http_get_state() != HTTP_IDLE)
+    {
+        app_w5500_http_proc();
+        ota_delay(10);
+    }
+
+    if (app_w5500_http_get_state() == HTTP_ERROR)
+    {
+        DEBUG_PRINT("status report timeout\r\n");
+        return -1;
+    }
+
+    http_response_t resp;
+    app_w5500_http_get_response(&resp);
+    DEBUG_PRINT("post path:%s\r\n" , path);
+    DEBUG_PRINT("post query:%s\r\n" , query);
+    DEBUG_PRINT("post headers:%s\r\n" , headers);
+    DEBUG_PRINT("post body:%s\r\n" , body);
+
+    DEBUG_PRINT("recv body:%s\r\n" , resp.body);
+    return (resp.status_code == HTTP_SUCCESS_CODE) ? 0 : -1;    
 }
 
 /**
@@ -182,6 +229,70 @@ static int ota_check_parse(http_response_t *resp)
     return 1;
 }
 
+static int ota_check_task(void)
+{
+    char headers[256] = {0};
+    char query[256] = {0};
+    int result = -1;
+    sprintf(headers, "Authorization: %s\r\n", OTA_Authorization);
+    /* version 为空时给默认值 "1.0" */
+    const char *ver = strlen(VERSION) > 0 ? VERSION : "1.0";
+    sprintf(query, "type=%d&version=%s", 2, ver);
+
+    int ret = app_w5500_http_get(OTA_CHECK_DOMAIN, 80, OTA_CHECK_PATH, query, headers); //发起http GET请求
+    if(ret == 0)
+    {
+        http_response_t resp;
+
+        /* 等待 HTTP 完成 */
+        while (app_w5500_http_get_state() != HTTP_IDLE)
+        {
+            app_w5500_http_proc();
+            ota_delay(10);
+        }
+
+        if (app_w5500_http_get_state() == HTTP_ERROR)
+        {
+            DEBUG_PRINT("OTA check HTTP timeout\r\n");
+            // ota_state = OTA_IDLE;
+            // break;
+            result = -1;
+        }
+        else
+        {
+            app_w5500_http_get_response(&resp); //获取响应的数据
+            // DEBUG_PRINT("recv resp:%s\r\n", resp.body);
+
+            int parse_ret = ota_check_parse(&resp);
+            if(parse_ret == 1)// 有新版本，进入下载
+            {
+                // ota_state = OTA_DOWNLOAD;
+                DEBUG_PRINT("Start firmware download\r\n");
+                result = 1;
+            }
+            else if(parse_ret == 0) //无升级任务
+            {
+                // ota_state = OTA_IDLE;
+                DEBUG_PRINT("No upgrade required\r\n");
+                result = 0;
+            }
+            else// 返回数据异常
+            {
+                // ota_state = OTA_ERROR;
+                DEBUG_PRINT("OTA check error\r\n");
+                result = -1;
+            }
+        }
+    }
+    else
+    {
+        DEBUG_PRINT("HTTP check request send fail\r\n");
+        // ota_state = OTA_IDLE;
+        result = -1;
+    }
+    return result;
+}
+
 /**
  * 
  * @brief 下载OTA固件
@@ -211,13 +322,13 @@ static int ota_download_block(unsigned long offset, uint8_t *buf)
         ret = -1;
     }
 
-    while(app_w5500_http_get_state() != HTTP_DONE && app_w5500_http_get_state() != HTTP_IDLE)
+    while(app_w5500_http_get_state() != HTTP_IDLE)
     {
         app_w5500_http_proc();
         ota_delay(10);
     }
 
-    if(app_w5500_http_get_state() == HTTP_IDLE)
+    if(app_w5500_http_get_state() == HTTP_ERROR)
     {
         DEBUG_PRINT("Download HTTP timeout or error\r\n");
         ret = -2;
@@ -285,11 +396,12 @@ void ota_proc(void)
         {
             // 上电读取Flash里保存的OTA配置
             app_flashdb_get("ota_info", &ota_info, sizeof(ota_info));
-            DEBUG_PRINT("OTA init finish, current version:%s\r\n", ota_info.version);
+
+            DEBUG_PRINT("OTA init finish, current version:%s\r\n", VERSION);
 
             if(ota_info.is_need_update == 1)
             {
-                if(ota_update_version(201) == 0)
+                if(ota_update_state(201) == 0)
                 {
                     DEBUG_PRINT("ota upgrade success reported\r\n");
                 }
@@ -298,6 +410,16 @@ void ota_proc(void)
                     DEBUG_PRINT("ota version update fail,retry\r\n");
                 }
                 ota_info.is_need_update = 0;
+            }
+            app_flashdb_set("ota_info", &ota_info, sizeof(ota_info));
+
+            if(ota_update_version() == 0)
+            {
+                DEBUG_PRINT("OTA update version success\r\n");
+            }
+            else
+            {
+                DEBUG_PRINT("OTA update version fail\r\n");
             }
             ota_state = OTA_IDLE;
             break;
@@ -325,58 +447,18 @@ void ota_proc(void)
 
         case OTA_CHECK:
         {
-            char headers[256] = {0};
-            char query[256] = {0};
-
-            sprintf(headers, "Authorization: %s\r\n", OTA_Authorization);
-            /* version 为空时给默认值 "1.0" */
-            const char *ver = strlen(ota_info.version) > 0 ? ota_info.version : "1.0";
-            sprintf(query, "type=%d&version=%s", 2, ver);
-
-            int ret = app_w5500_http_get(OTA_CHECK_DOMAIN, 80, OTA_CHECK_PATH, query, headers); //发起http GET请求
-            if(ret == 0)
+            int ret = ota_check_task();
+            if(ret < 0)
             {
-                http_response_t resp;
-
-                /* 等待 HTTP 完成 */
-                while (app_w5500_http_get_state() != HTTP_DONE && app_w5500_http_get_state() != HTTP_IDLE)
-                {
-                    app_w5500_http_proc();
-                    ota_delay(10);
-                }
-
-                if (app_w5500_http_get_state() == HTTP_IDLE)
-                {
-                    DEBUG_PRINT("OTA check HTTP timeout\r\n");
-                    ota_state = OTA_IDLE;
-                    break;
-                }
-
-                app_w5500_http_get_response(&resp); //获取响应的数据
-                // DEBUG_PRINT("recv resp:%s\r\n", resp.body);
-
-                int parse_ret = ota_check_parse(&resp);
-                if(parse_ret == 1)// 有新版本，进入下载
-                {
-                    ota_state = OTA_DOWNLOAD;
-                    DEBUG_PRINT("Start firmware download\r\n");
-                }
-                else if(parse_ret == 0) //无升级任务
-                {
-                    ota_state = OTA_IDLE;
-                    DEBUG_PRINT("No upgrade required\r\n");
-                }
-                else// 返回数据异常
-                {
-                    ota_state = OTA_ERROR;
-                    DEBUG_PRINT("OTA check error\r\n");
-                }
-
+                ota_state = OTA_ERROR;
             }
-            else
+            else if(ret == 0)
             {
-                DEBUG_PRINT("HTTP check request send fail\r\n");
                 ota_state = OTA_IDLE;
+            }
+            else if(ret == 1)
+            {
+                ota_state = OTA_DOWNLOAD;
             }
             break;
         }
@@ -439,18 +521,13 @@ void ota_proc(void)
 
         case OTA_FINISH:
         {
-            /* 上报下载完成 (step=100，平台状态变为"正在升级") */
-            if(ota_update_version(100) != 0)
+            if(ota_update_state(100) != 0)
             {
                 DEBUG_PRINT("report download finish fail, retry\r\n");
                 break;
             }
-            ota_info.is_need_update = 1;
-            /* 设置升级标志，通知 bootloader 从 W25Q download 分区搬运固件到片内 APP 区 */
-            {
-                uint8_t flag = 1;
-                app_flashdb_set("upgrade_flag", &flag, sizeof(flag));
-            }
+            ota_info.is_need_update = 2;
+            app_flashdb_set("ota_info", &ota_info, sizeof(ota_info));
             DEBUG_PRINT("OTA download all finish, reboot to upgrade\r\n");
             ota_reboot();
             break;

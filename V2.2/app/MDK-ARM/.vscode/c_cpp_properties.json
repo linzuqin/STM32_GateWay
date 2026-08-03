@@ -140,6 +140,7 @@
                 "e:\\project\\myproject\\myCard\\wlan\\V2.2\\app\\BSP\\ioLibrary_Driver\\Internet\\SNTP",
                 "e:\\project\\myproject\\myCard\\wlan\\V2.2\\app\\BSP\\RTT",
                 "e:\\project\\myproject\\myCard\\wlan\\V2.2\\app\\BSP\\OTA",
+                "E:\\KEIL\\CORE\\ARM\\ARMCC\\include",
                 "e:\\project\\myproject\\myCard\\wlan\\V2.2\\app\\MDK-ARM",
                 "e:\\project\\myproject\\myCard\\wlan\\V2.2\\app\\Core\\Src",
                 "e:\\project\\myproject\\myCard\\wlan\\V2.2\\app\\Drivers\\STM32F1xx_HAL_Driver\\Src",

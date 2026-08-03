@@ -1,0 +1,12 @@
+.\v2.0\clipping_filter.o: ..\BSP\Filter_method\Clipping_Filter.c
+.\v2.0\clipping_filter.o: ..\BSP\Filter_method\Clipping_Filter.h
+.\v2.0\clipping_filter.o: E:\KEIL\CORE\ARM\ARM_Compiler_5.06u7\Bin\..\include\stdint.h
+.\v2.0\clipping_filter.o: E:\KEIL\CORE\ARM\ARM_Compiler_5.06u7\Bin\..\include\string.h
+.\v2.0\clipping_filter.o: E:\KEIL\CORE\ARM\ARM_Compiler_5.06u7\Bin\..\include\stdlib.h
+.\v2.0\clipping_filter.o: E:\KEIL\CORE\ARM\ARM_Compiler_5.06u7\Bin\..\include\stdio.h
+.\v2.0\clipping_filter.o: ..\BSP\Filter_method\Filter_data_type.h
+.\v2.0\clipping_filter.o: ..\BSP\Filter_method\Filter_manager.h
+.\v2.0\clipping_filter.o: ..\BSP\Filter_method\Average_Filter.h
+.\v2.0\clipping_filter.o: ..\BSP\Filter_method\Median_Filter.h
+.\v2.0\clipping_filter.o: ..\BSP\Filter_method\IIR_Filter.h
+.\v2.0\clipping_filter.o: ..\BSP\Filter_method\Compensation_Filter.h

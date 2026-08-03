@@ -11,7 +11,6 @@ typedef enum
     HTTP_WAIT_CONNECT,
     HTTP_SEND_REQUEST,
     HTTP_RECV_RESPONSE,
-    HTTP_DONE,
     HTTP_ERROR,
     HTTP_CLOSE,
 } HTTP_State_t;

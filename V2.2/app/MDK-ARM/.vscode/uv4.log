@@ -1,3 +1,3 @@
-Load "v2.0\\v2_0.axf" 
+Load "e:\\project\\myproject\\myCard\\wlan\\V2.2\\app\\MDK-ARM\\v2.0\\v2_0.axf" 
 Erase Done.Programming Done.Verify OK.Application running ...
-Flash Load finished at 23:50:21
+Flash Load finished at 23:19:26
