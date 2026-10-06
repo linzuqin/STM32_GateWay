@@ -1,0 +1,553 @@
+#include "msh.h"
+#include "main.h"
+#include "usart.h"
+#include "app_w25qxx.h"
+#include "lfs_user.h"
+#include "wiz_platform.h"
+#include "app_w5500.h"
+#include "temp.h"
+#include "STTS22HTR.h"
+#include "app_flashdb.h"
+#include "digital.h"
+#include "app_w5500_ntp.h"
+#include "ota.h"
+#include "app_w5500.h"
+
+#define DEBUG_ENABLE    1
+#define DEBUG_LOG "[ MSH ]"
+#include "debug_print.h"
+
+
+static uint8_t msh_buf[MSH_CMD_MAX_LEN];
+static void msh_help_callback(int argc, char *argv);
+static void msh_reboot_callback(int argc, char *argv);
+static void msh_test_callback(int argc, char *argv);
+static void msh_clean_flash_callback(int argc, char *argv);
+static void msh_set_client_ip_callback(int argc, char *argv);
+static void msh_find_callback(int argc, char *argv);
+static void msh_ipconfig_callback(int argc, char *argv);
+static void msh_board_info_callback(int argc, char *argv);
+static void set_digital_info_callback(int argc, char *argv);
+static void get_digital_info_callback(int argc, char *argv);
+static void msh_time_callback(int argc, char *argv);
+static void ota_start_callback(int argc, char *argv);
+
+static uint8_t msh_recv_flag = 0;
+#if MSH_USE_RTT
+static uint8_t msh_buf_idx = 0;
+static uint8_t msh_esc_state = 0;  /* 0=正常, 1=收到ESC, 2=收到ESC[ */
+#endif
+
+static char cmd[MSH_CMD_MAX_LEN] = {0};
+static char arg[MSH_PROFILE_MAX_LEN] = {0};
+
+msh_cmd_table_t msh_cmd_table[] = {
+	{"help" , "show all msh help" , msh_help_callback},
+	{"reboot" , "reboot system" , msh_reboot_callback},
+	{"test" , "process test demo" , msh_test_callback},
+	{"clean_flash" , "clean extern flash" , msh_clean_flash_callback},
+	{"find" , "find params" , msh_find_callback},
+	{"ipconfig" , "show network config" , msh_ipconfig_callback},
+	{"set_ip" , "set dest IP address and port" , msh_set_client_ip_callback},
+	{"board_info" , "get board info params" , msh_board_info_callback},
+	{"set_digital" , "set point digital out" , set_digital_info_callback},
+	{"get_digital" , "get point digital state" , get_digital_info_callback},
+	{"time" , "get board time (NTP)" , msh_time_callback},
+	{"otaRun" , "start ota task" , ota_start_callback},
+};
+uint16_t msh_table_len = sizeof(msh_cmd_table) / sizeof(msh_cmd_table_t);
+
+/**
+ * 
+ * @brief 数据接收函数 
+ * @param data 需要处理的数据
+ * @param size 数据长度
+ * @author LinZuQin (1904499306@qq.com)
+ * @date 2026-06-28 15:02:10
+ */
+void msh_rx_data(uint8_t *data , uint16_t size)
+{
+    if(size > MSH_CMD_MAX_LEN){
+        return;
+    }else{
+        memcpy(msh_buf , data , size);
+			msh_recv_flag = 1;
+    }
+}
+
+/**
+ * 
+ * @brief 文本输出函数 硬件输出自定义
+ * @author LinZuQin (1904499306@qq.com)
+ * @date 2026-06-28 15:06:41
+ * @copyright Copyright (c) 2026
+ */
+__attribute__((weak)) void msh_putc(char c)
+{
+#ifdef MSH_USE_RTT
+    (void)c;
+    SEGGER_RTT_Write(0, &c, 1);
+#else
+    (void)c;
+    HAL_UART_Transmit(&huart1 , (uint8_t *)&c , 1 , 1000);
+#endif
+}
+
+/**
+ * 
+ * @brief 系统重启函数 需要根据硬件自定义
+ * @author LinZuQin (1904499306@qq.com)
+ * @date 2026-06-28 15:06:51
+ * @copyright Copyright (c) 2026
+ */
+void system_reboot(void)
+{
+    HAL_NVIC_SystemReset();
+}
+
+/**
+ * 
+ * @brief msh专用打印函数 
+ * @param fmt 
+ * @param ... 
+ * @author LinZuQin (1904499306@qq.com)
+ * @date 2026-07-30 23:03:37
+ * @copyright Copyright (c) 2026
+ */
+void msh_printf(const char *fmt, ...)
+{
+	char String[100];
+	va_list arg;
+	va_start(arg, fmt);
+	vsprintf(String, fmt, arg);
+	va_end(arg);
+#ifdef MSH_USE_RTT
+	SEGGER_RTT_WriteString(0, String);
+#else
+	HAL_UART_Transmit(&huart1, (uint8_t *)String, strlen(String), HAL_MAX_DELAY);
+#endif
+}
+
+/**
+ * 
+ * @brief 指令默认回调函数 未指定回调函数时自动调用
+ * @param argc 
+ * @param argv 
+ * @author LinZuQin (1904499306@qq.com)
+ * @date 2026-07-30 23:03:49
+ * @copyright Copyright (c) 2026
+ */
+static void msh_default_callback(int argc, char *argv)
+{
+    msh_printf("cmd process finish\r\n");
+}
+
+/**
+ * 
+ * @brief 帮助指令回调函数
+ * @param argc 
+ * @param argv 
+ * @author LinZuQin (1904499306@qq.com)
+ * @date 2026-07-30 23:06:07
+ * @copyright Copyright (c) 2026
+ */
+static void msh_help_callback(int argc, char *argv)
+{
+	uint16_t i =0;
+	if(argv[0] != 0)
+	{
+		for (i = 0; i < msh_table_len; i++)
+		{
+			msh_cmd_table_t *p = &msh_cmd_table[i];
+			if (strcmp(p->cmd, argv) == 0)
+			{
+				msh_printf("%s : %s\r\n" , p->cmd , p->desc);
+				break;
+
+			}
+		}
+		if(i == msh_table_len)
+		{
+			msh_printf("未找到指令\r\n");
+		}
+	}
+	else
+	{
+		msh_printf("\r\n");
+		msh_printf("================= MSH Command List =================\r\n");
+		for (i = 0; i < msh_table_len; i++)
+		{
+			msh_cmd_table_t *p = &msh_cmd_table[i];
+			if (strcmp(p->cmd, "\r\n") == 0)
+				continue;
+			msh_printf("  %-12s - %s\r\n", p->cmd, p->desc);
+		}
+		msh_printf("====================================================\r\n");
+	}
+
+}
+
+static void msh_reboot_callback(int argc, char *argv)
+{
+    msh_printf("system reboot.....\r\n");
+    system_reboot();
+}
+
+static void msh_test_callback(int argc, char *argv)
+{
+    msh_printf("syetem test start.....\r\n");
+}
+
+/**
+ * 
+ * @brief 清理外部flash 
+ * @param argc 
+ * @param argv 
+ * @author LinZuQin (1904499306@qq.com)
+ * @date 2026-07-30 23:03:23
+ * @copyright Copyright (c) 2026
+ */
+static void msh_clean_flash_callback(int argc, char *argv)
+{
+	app_w25qxx_chip_erase();
+	printf("flash earse finish ，reboot...\r\n");
+	system_reboot();
+}
+
+
+static void msh_set_client_ip_callback(int argc, char *argv)
+{
+	if (argv[0] == 0)
+	{
+		msh_printf("当前ip:%d.%d.%d.%d\r\n" , tcp_client_dest_ip[0] , tcp_client_dest_ip[1] , tcp_client_dest_ip[2] , tcp_client_dest_ip[3]);
+		msh_printf("用法: set_dest_ip <ip_address>\r\n");
+		return;
+	}
+	int ip[4] = {0};
+	int port = 0;
+	int ret = sscanf(argv , "%d.%d.%d.%d:%d" , &ip[0] , &ip[1] , &ip[2] , &ip[3] , &port);
+	if(ret != 5)
+	{
+		msh_printf("IP地址格式错误\r\n");
+		return;
+	}
+	else
+	{
+		tcp_client_dest_ip[0] = ip[0];
+		tcp_client_dest_ip[1] = ip[1];
+		tcp_client_dest_ip[2] = ip[2];
+		tcp_client_dest_ip[3] = ip[3];
+		tcp_client_dest_port = port;
+		char client_info[32] = {0};
+		sprintf(client_info , "%d.%d.%d.%d:%d" , tcp_client_dest_ip[0] ,tcp_client_dest_ip[1] , tcp_client_dest_ip[2] , tcp_client_dest_ip[3] , tcp_client_dest_port);
+		if(app_flashdb_set("client_info" , client_info , sizeof(client_info)) == 0)
+		{
+			msh_printf("ip info refresh , new ip:%d.%d.%d.%d port:%d\r\n" ,tcp_client_dest_ip[0] ,tcp_client_dest_ip[1] , tcp_client_dest_ip[2] , tcp_client_dest_ip[3] , tcp_client_dest_port);
+		}
+	}
+
+}
+
+
+static void msh_find_callback(int argc, char *argv)
+{
+	if (argv[0] == 0)
+	{
+		msh_printf("用法: find <params>\r\n");
+		msh_printf("for example:find ip\r\n");
+		return;
+	}
+
+	if(strstr(&argv[0] , "ip"))
+	{
+		msh_printf("当前ip:%d.%d.%d.%d:%d\r\n" , tcp_client_dest_ip[0] , tcp_client_dest_ip[1] , tcp_client_dest_ip[2] , tcp_client_dest_ip[3] , tcp_client_dest_port);
+	}
+	else if(strstr(&argv[0] , "boot"))
+	{
+		msh_printf("当前开机次数:%d\r\n" , Get_Boot());
+	}
+	else
+	{
+		msh_printf("参数异常\r\n");
+	}
+}
+
+static void msh_ipconfig_callback(int argc, char *argv)
+{
+    wiz_NetInfo info;
+    wizchip_getnetinfo(&info);
+    msh_printf(" MAC         : %02X:%02X:%02X:%02X:%02X:%02X\r\n",info.mac[0], info.mac[1], info.mac[2],info.mac[3], info.mac[4], info.mac[5]);
+    msh_printf(" IP          : %d.%d.%d.%d\r\n",info.ip[0], info.ip[1], info.ip[2], info.ip[3]);
+    msh_printf(" Subnet Mask : %d.%d.%d.%d\r\n",info.sn[0], info.sn[1], info.sn[2], info.sn[3]);
+    msh_printf(" Gateway     : %d.%d.%d.%d\r\n",info.gw[0], info.gw[1], info.gw[2], info.gw[3]);
+    msh_printf(" DNS         : %d.%d.%d.%d\r\n",info.dns[0], info.dns[1], info.dns[2], info.dns[3]);
+    msh_printf(" DHCP        : %s\r\n",info.dhcp == NETINFO_DHCP ? "DHCP" : "Static");
+    msh_printf("--------------------------------------------\r\n");
+		msh_printf(" SOCKET0     : %s\r\n", socket_manage[0].identifier);
+    msh_printf(" Dest IP     : %d.%d.%d.%d\r\n",tcp_client_dest_ip[0], tcp_client_dest_ip[1],tcp_client_dest_ip[2], tcp_client_dest_ip[3]);
+    msh_printf(" Dest Port   : %d\r\n\r\n", tcp_client_dest_port);
+	
+		msh_printf(" SOCKET1     : %s\r\n", socket_manage[1].identifier);
+    msh_printf(" Dest IP     : -----------\r\n");
+    msh_printf(" Dest Port   : %d\r\n\r\n", udp_server_port);	
+	
+		msh_printf(" SOCKET2     : %s\r\n", socket_manage[2].identifier);
+    msh_printf(" Dest IP     : %d.%d.%d.%d\r\n",info.ip[0], info.ip[1], info.ip[2], info.ip[3]);
+    msh_printf(" Dest Port   : %d\r\n\r\n", tcp_server_port);
+	
+		msh_printf(" SOCKET3     : %s\r\n", socket_manage[3].identifier);
+    msh_printf(" Dest IP     : %s\r\n",MQTT_SERVER_DOMAIN);
+    msh_printf(" Dest Port   : %d\r\n\r\n", mqtt_port);
+
+		msh_printf(" SOCKET4     : %s\r\n", socket_manage[4].identifier);
+    msh_printf(" Dest IP     : -----------\r\n");
+    msh_printf(" Dest Port   : -----------\r\n\r\n", tcp_client_dest_port);
+	
+		msh_printf(" SOCKET5     : %s\r\n", socket_manage[5].identifier);
+    msh_printf(" Dest IP     : -----------\r\n");
+    msh_printf(" Dest Port   : -----------\r\n\r\n");
+	
+		msh_printf(" SOCKET6     : %s\r\n", socket_manage[6].identifier);
+    msh_printf(" Dest IP     : %s\r\n",NTP_DEFAULT_SERVER);
+    msh_printf(" Dest Port   : -----------\r\n\r\n");
+	
+		msh_printf(" SOCKET7     : %s\r\n", socket_manage[7].identifier);
+    msh_printf(" Dest IP     : %d.%d.%d.%d\r\n",info.ip[0], info.ip[1], info.ip[2], info.ip[3]);
+    msh_printf(" Dest Port   : %d\r\n\r\n", tcp_server_modbus_slave_port);
+}
+
+static void msh_sudo_callback(char *buf)
+{
+    if(strstr(buf ,"reboot")!= NULL)
+    {
+        msh_printf("force reboot\r\n");
+        msh_reboot_callback(0 , NULL);
+    }
+    else if(strstr(buf , "clean_flash") != NULL)
+    {
+        msh_printf("force clean_flash\r\n");
+        msh_clean_flash_callback(0 , NULL);
+    }
+    else
+    {
+        msh_printf("未知管理员指令\r\n");
+    }
+}
+
+/**
+ * 
+ * @brief 打印板载信息指令
+ * @param argc 
+ * @param argv 
+ * @author LinZuQin (1904499306@qq.com)
+ * @date 2026-07-30 23:03:01
+ * @copyright Copyright (c) 2026
+ */
+static void msh_board_info_callback(int argc, char *argv)
+{
+    RCC_ClkInitTypeDef clk_cfg;
+    uint32_t flash_latency;
+    // 读取系统时钟配置
+    HAL_RCC_GetClockConfig(&clk_cfg, &flash_latency);
+
+    // 计算各总线时钟 MHz
+//    uint32_t sysclk_mhz = clk_cfg.SYSCLKSource / 1000000U;
+//    uint32_t hclk_mhz   = clk_cfg.AHBCLKDivider / 1000000U;
+//    uint32_t pclk1_mhz  = clk_cfg.APB1CLKDivider / 1000000U;
+//    uint32_t pclk2_mhz  = clk_cfg.APB2CLKDivider / 1000000U;
+
+    msh_printf("=================== BOARD INFO ===================\r\n");
+    msh_printf("Hardware Model:    STM32F103RET6-W5500-V1.0\r\n");
+    msh_printf("MCU Part Number:   STM32F103RET6\r\n");
+    msh_printf("Chip Unique UID:   %s\r\n", board_info.mcu_id);
+    msh_printf("Boot Counter:      %lu\r\n", Get_Boot());
+    msh_printf("MCU Internal Temp: %.3f ℃\r\n", board_info.board_temp);
+    msh_printf("Board Temp: %.3f ℃\r\n", board_info.env_temp);
+
+    // msh_printf("\r\nSystem Clock Info:\r\n");
+    // msh_printf("SYSCLK Core:       %lu MHz\r\n", sysclk_mhz);
+    // msh_printf("AHB HCLK:          %lu MHz\r\n", hclk_mhz);
+    // msh_printf("APB1 PCLK1:        %lu MHz\r\n", pclk1_mhz);
+    // msh_printf("APB2 PCLK2:        %lu MHz\r\n", pclk2_mhz);
+    // msh_printf("Flash Latency WS:  %lu\r\n", flash_latency);
+    msh_printf("\r\nTCP Client Default Config:\r\n");
+    msh_printf("Dest TCP IP:       %d.%d.%d.%d\r\n",
+        tcp_client_dest_ip[0], tcp_client_dest_ip[1],
+        tcp_client_dest_ip[2], tcp_client_dest_ip[3]);
+    msh_printf("Dest TCP Port:     %u\r\n", tcp_client_dest_port);
+    msh_printf("===================================================\r\n");
+}
+
+static void set_digital_info_callback(int argc, char *argv)
+{
+	int digital_channle = 0;
+	int digital_state = 0;
+	if(sscanf(argv , "%d_%d" , &digital_channle , &digital_state)!= 2)
+	{
+		msh_printf("用法: set_digital <params>\r\n");
+		msh_printf("for example:set_digital 0_1\r\n");
+	}
+	else
+	{
+		Set_digital(digital_channle , digital_state);
+		msh_printf("成功设置数字量输出,通道:%d 状态:%d\r\n" , digital_channle , digital_state);
+	}
+
+}
+
+static void get_digital_info_callback(int argc, char *argv)
+{
+	int digital_channle = 0;
+	
+	sscanf(argv , "%d" , &digital_channle);
+	msh_printf("成功获取数字量,通道:%d 状态:%d\r\n" , digital_channle , Read_digital_State(digital_channle));
+}
+
+static void msh_time_callback(int argc, char *argv)
+{
+    ntp_time_t t;
+    NTP_State_t state = app_w5500_ntp_get_state();
+
+    if (state == NTP_SYNC_OK)
+    {
+        if (app_w5500_ntp_get_time(&t))
+        {
+            msh_printf("Board Time: %04d-%02d-%02d %02d:%02d:%02d\r\n",
+                t.year, t.month, t.day, t.hour, t.minute, t.second);
+        }
+        else
+        {
+            msh_printf("Error: Failed to get time\r\n");
+        }
+    }
+    else if (state == NTP_SYNCING)
+    {
+        msh_printf("NTP is syncing, please wait...\r\n");
+    }
+    else if (state == NTP_INIT || state == NTP_RESOLVE)
+    {
+        msh_printf("NTP not synced yet, resolving server...\r\n");
+    }
+    else
+    {
+        msh_printf("NTP sync failed, time unavailable\r\n");
+    }
+}
+
+static void ota_start_callback(int argc, char *argv)
+{
+	ota_set_start();
+	DEBUG_PRINT("START OTA TASK....\r\n");
+}
+
+/**
+ * 
+ * @brief msh处理函数放在线程里调用
+ * @author LinZuQin (1904499306@qq.com)
+ * @date 2026-06-28 15:13:24
+ * @copyright Copyright (c) 2026
+ */
+void msh_process(void)
+{
+#if MSH_USE_RTT
+	/* RTT 输入轮询 */
+	while (SEGGER_RTT_HasKey())
+	{
+		char c = (char)SEGGER_RTT_GetKey();
+		
+		/* 过滤转义序列（方向键等），避免 pyOCD 崩溃 */
+		if (msh_esc_state == 0 && c == 0x1B)
+		{
+			msh_esc_state = 1;
+			continue;
+		}
+		if (msh_esc_state == 1)
+		{
+			msh_esc_state = (c == '[') ? 2 : 0;
+			continue;
+		}
+		if (msh_esc_state == 2)
+		{
+			msh_esc_state = 0;
+			continue;
+		}
+		
+		if (c == '\r' || c == '\n')
+		{
+			if (msh_buf_idx > 0)
+			{
+				msh_buf[msh_buf_idx] = '\0';
+				msh_buf_idx = 0;
+				msh_recv_flag = 1;
+			}
+			else
+			{
+				/* 空行回车：显示新提示符 */
+				msh_printf("msh> ");
+			}
+		}
+		else if (c == '\b' || c == 0x7F)
+		{
+			if (msh_buf_idx > 0)
+			{
+				msh_buf_idx--;
+				msh_printf("\b \b");
+			}
+		}
+		else if (msh_buf_idx < MSH_CMD_MAX_LEN - 1)
+		{
+			msh_buf[msh_buf_idx++] = c;
+			/* 普通字符由 pyOCD 本地回显，固件不回显，避免双份 */
+		}
+	}
+#endif
+
+	if(msh_recv_flag == 0)
+	{
+		return;
+	}
+	msh_recv_flag = 0;
+	size_t len = strlen((const char *)msh_buf);
+	if (len == 0 || strspn((const char *)msh_buf, " \t\r\n") == len) {
+			msh_printf("\r\nmsh> ");
+			memset(msh_buf, 0, sizeof(msh_buf));
+			return;
+	}
+
+	arg[0] = 0;
+	sscanf((char *)msh_buf , "%s %s" , cmd , arg);
+	for (uint16_t i = 0; i < msh_table_len; i++)
+	{
+		if(strstr((char *)msh_buf , "sudo") != NULL)
+		{
+			msh_sudo_callback((char *)&msh_buf[0 + strlen("sudo ")]);
+			memset(msh_buf, 0, sizeof(msh_buf));
+		}
+		else if (strcmp(cmd, msh_cmd_table[i].cmd) == 0)
+		{
+			if (msh_cmd_table[i].callback != NULL)
+			{
+				msh_cmd_table[i].callback(0, arg);
+			}
+			else
+			msh_default_callback(0, msh_cmd_table[i].cmd);
+			memset(msh_buf, 0, sizeof(msh_buf));
+			msh_printf("\r\nmsh> ");
+			break;
+		}
+
+	}
+}
+
+/**
+ * 
+ * @brief msh参数初始化
+ * @author LinZuQin (1904499306@qq.com)
+ * @date 2026-07-30 23:02:50
+ * @copyright Copyright (c) 2026
+ */
+void msh_init(void)
+{
+	msh_printf("MSH initialized.\r\n");
+	msh_printf("msh> ");
+}

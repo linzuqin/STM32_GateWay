@@ -1,0 +1,22 @@
+{
+    "version": "0.2.0",
+    "configurations": [
+        {
+            "name": "Cortex Debug STM32F103RE (DAPLink)",
+            "type": "cortex-debug",
+            "request": "launch",
+            "servertype": "openocd",
+            "cwd": "${workspaceFolder}",
+            "executable": "E:/project/myproject/myCard/wlan/v2.0/MDK-ARM/v2.0/v2_0.hex",
+            "configFiles": [
+                "interface/cmsis-dap.cfg",
+                "target/stm32f1x.cfg"
+            ],
+            "runToEntryPoint": "main",
+            "device": "STM32F103RE",
+            "svdFile": "${workspaceFolder}/STM32F103xx.svd",
+            "showDevDebugOutput": "raw",
+            "toolchainPrefix": "arm-none-eabi"
+        }
+    ]
+}
