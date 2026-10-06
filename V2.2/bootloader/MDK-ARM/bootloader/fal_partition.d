@@ -1,9 +1,0 @@
-bootloader\fal_partition.o: ..\..\app\BSP\FlashDB\port\fal\src\fal_partition.c
-bootloader\fal_partition.o: ..\..\app\BSP\FlashDB\port\fal\inc\fal.h
-bootloader\fal_partition.o: ..\..\app\BSP\FlashDB\port\fal\inc\fal_cfg.h
-bootloader\fal_partition.o: ..\..\app\BSP\FlashDB\port\fal\inc\fal_def.h
-bootloader\fal_partition.o: E:\KEIL\CORE\ARM\ARM_Compiler_5.06u7\Bin\..\include\stdint.h
-bootloader\fal_partition.o: E:\KEIL\CORE\ARM\ARM_Compiler_5.06u7\Bin\..\include\stdio.h
-bootloader\fal_partition.o: E:\KEIL\CORE\ARM\ARM_Compiler_5.06u7\Bin\..\include\inttypes.h
-bootloader\fal_partition.o: E:\KEIL\CORE\ARM\ARM_Compiler_5.06u7\Bin\..\include\string.h
-bootloader\fal_partition.o: E:\KEIL\CORE\ARM\ARM_Compiler_5.06u7\Bin\..\include\stdlib.h
